@@ -39,6 +39,9 @@ async function registerAccountParent(req, res) {
     if (err.message == 409) {
       return handle409Response(res);
     }
+    if (err.message == 401) {
+      return handle401Response(res);
+    }
     logger.error({ status: 500, error: err });
     handle500Response(res);
   }

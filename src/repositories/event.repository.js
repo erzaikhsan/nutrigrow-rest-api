@@ -31,7 +31,7 @@ async function getEvents() {
       "description",
       "region",
     ],
-    order: [["date", "DESC"]],
+    order: [["date", "ASC"]],
   });
 }
 
@@ -69,7 +69,12 @@ async function getEventByRegion(region) {
   });
 }
 
-async function getEventByMonth(month, year, region) {
+async function getIncomingEvent(date, region) {
+  const localDate = new Date(date);
+  const startOfDay = new Date(
+    localDate.toISOString().split("T")[0] + "T00:00:00.000Z"
+  );
+
   return EventModel.findAll({
     attributes: [
       "id",
@@ -83,21 +88,20 @@ async function getEventByMonth(month, year, region) {
     ],
     where: {
       date: {
-        [Op.gte]: new Date(year, month, 1),
-        [Op.lt]: new Date(year, month + 1, 1),
+        [Op.gte]: startOfDay,
       },
       [Op.or]: [{ region: region }, { region: "Village" }],
     },
-    order: [["date", "DESC"]],
+    order: [["date", "ASC"]],
   });
 }
 
 async function getEventToday(currentDate, region) {
   const startOfDay = new Date(currentDate);
-  startOfDay.setUTCHours(0, 0, 0, 0); // awal hari
+  startOfDay.setUTCHours(0, 0, 0, 0);
 
   const endOfDay = new Date(currentDate);
-  endOfDay.setUTCHours(23, 59, 59, 999); // akhir hari
+  endOfDay.setUTCHours(23, 59, 59, 999);
 
   return EventModel.findAll({
     attributes: [
@@ -159,7 +163,7 @@ module.exports = {
   getEvents,
   getEventById,
   getEventByRegion,
-  getEventByMonth,
+  getIncomingEvent,
   getEventToday,
   updateEvent,
   deleteEvent,

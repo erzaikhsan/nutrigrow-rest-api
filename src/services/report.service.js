@@ -7,13 +7,31 @@ const {
 const PDFDocument = require("pdfkit-table");
 const { WritableStreamBuffer } = require("stream-buffers");
 const { format } = require("date-fns");
-const { id } = require("date-fns/locale");
+const { id, ro } = require("date-fns/locale");
 
-async function generateChildrenReportPDF() {
+async function generateChildrenReportPDF(currentDate) {
   const childrenList = await ChildrenRepository.getChildren();
   if (childrenList.length === 0) {
     throw new Error(404);
   }
+
+  const month = new Date(currentDate).getMonth();
+  const year = new Date(currentDate).getFullYear();
+
+  const monthName = [
+    "Januari",
+    "Februari",
+    "Maret",
+    "April",
+    "Mei",
+    "Juni",
+    "Juli",
+    "Agustus",
+    "September",
+    "Oktober",
+    "November",
+    "Desember",
+  ];
 
   const doc = new PDFDocument({ margin: 30, size: "A4", layout: "landscape" });
   const buffer = new WritableStreamBuffer();
@@ -23,8 +41,14 @@ async function generateChildrenReportPDF() {
   doc
     .font("Helvetica-Bold")
     .fontSize(18)
-    .text("Daftar Balita Posyandu Desa Jipang", { align: "center" });
-  doc.moveDown();
+    .text("Data Hasil Penimbangan Balita Posyandu Jipang", { align: "center" });
+  doc.moveDown(1);
+
+  doc
+    .font("Helvetica")
+    .fontSize(14)
+    .text(`Data Bulan : ${monthName[month]} ${year}`)
+    .moveDown();
 
   //Susun data dalam format tabel
   const table = {
@@ -39,26 +63,68 @@ async function generateChildrenReportPDF() {
       "BB (kg)",
       "TB (cm)",
       "LK (cm)",
+      "LL (cm)",
       "WFA",
       "HFA",
       "WFH",
+      "Tgl Penimbangan",
     ],
-    rows: childrenList.map((child, index) => [
-      index + 1,
-      child.full_name,
-      child.gender === "M" ? "Laki-laki" : "Perempuan",
-      child.place_of_birth,
-      format(new Date(child.date_of_birth), "dd MMMM yyyy", { locale: id }),
-      child.father,
-      child.mother,
-      child.birth_weight,
-      child.birth_height,
-      child.birth_head_circum,
-      child.wfa_status,
-      child.hfa_status,
-      child.wfh_status,
-    ]),
+    rows: [],
   };
+
+  for (let [index, child] of childrenList.entries()) {
+    const childGrowth = await GrowthRepository.getGrowthByMonthYearAndChildId(
+      child.children_id,
+      month,
+      year
+    );
+
+    if (childGrowth.length === 0) {
+      const recentGrowth = await GrowthRepository.getLastGrowthByChildId(
+        child.children_id
+      );
+
+      table.rows.push([
+        index + 1,
+        child.full_name,
+        child.gender === "M" ? "Laki-laki" : "Perempuan",
+        child.place_of_birth,
+        format(new Date(child.date_of_birth), "dd MMMM yyyy", { locale: id }),
+        child.father,
+        child.mother,
+        recentGrowth.dataValues.weight,
+        recentGrowth.dataValues.height,
+        recentGrowth.dataValues.head_circum,
+        recentGrowth.dataValues.arm_circum,
+        recentGrowth.dataValues.wfa_status,
+        recentGrowth.dataValues.hfa_status,
+        recentGrowth.dataValues.wfh_status,
+        format(new Date(recentGrowth.dataValues.date), "dd MMMM yyyy", {
+          locale: id,
+        }),
+      ]);
+    } else {
+      table.rows.push([
+        index + 1,
+        child.full_name,
+        child.gender === "M" ? "Laki-laki" : "Perempuan",
+        child.place_of_birth,
+        format(new Date(child.date_of_birth), "dd MMMM yyyy", { locale: id }),
+        child.father,
+        child.mother,
+        childGrowth.dataValues.weight,
+        childGrowth.dataValues.height,
+        childGrowth.dataValues.head_circum,
+        childGrowth.dataValues.arm_circum,
+        childGrowth.dataValues.wfa_status,
+        childGrowth.dataValues.hfa_status,
+        childGrowth.dataValues.wfh_status,
+        format(new Date(childGrowth.dataValues.date), "dd MMMM yyyy", {
+          locale: id,
+        }),
+      ]);
+    }
+  }
 
   //Buat tabel ke dalam dokumen PDF
   await doc.table(table, {
@@ -66,7 +132,7 @@ async function generateChildrenReportPDF() {
     prepareRow: (row, i) => doc.font("Helvetica").fontSize(8),
     padding: 5,
     columnSpacing: 5,
-    columnsSize: [30, 90, 60, 70, 80, 90, 90, 45, 45, 45, 45, 45, 45],
+    columnsSize: [25, 85, 55, 65, 70, 75, 75, 35, 35, 35, 35, 40, 40, 40, 80],
   });
 
   doc.end();
@@ -77,11 +143,37 @@ async function generateChildrenReportPDF() {
   });
 }
 
-async function generateRegionChildrenReportPDF(region) {
+async function generateRegionChildrenReportPDF(currentDate, region) {
   const childrenList = await ChildrenRepository.getChildrenByRegion(region);
   if (childrenList.length === 0) {
     throw new Error(404);
   }
+
+  const month = new Date(currentDate).getMonth();
+  const year = new Date(currentDate).getFullYear();
+
+  const monthName = [
+    "Januari",
+    "Februari",
+    "Maret",
+    "April",
+    "Mei",
+    "Juni",
+    "Juli",
+    "Agustus",
+    "September",
+    "Oktober",
+    "November",
+    "Desember",
+  ];
+
+  const posyanduName = {
+    RW1: "PAMUJI 1",
+    RW2: "PAMUJI 2",
+    RW3: "PAMUJI 3",
+    RW4: "PAMUJI 4",
+    RW5: "PAMUJI 5",
+  };
 
   const doc = new PDFDocument({ margin: 30, size: "A4", layout: "landscape" });
   const buffer = new WritableStreamBuffer();
@@ -91,8 +183,16 @@ async function generateRegionChildrenReportPDF(region) {
   doc
     .font("Helvetica-Bold")
     .fontSize(18)
-    .text(`Daftar Balita Posyandu Wilayah ${region}`, { align: "center" });
-  doc.moveDown();
+    .text(`Data Hasil Penimbangan Balita ${posyanduName(region)}`, {
+      align: "center",
+    });
+  doc.moveDown(1);
+
+  doc
+    .font("Helvetica")
+    .fontSize(14)
+    .text(`Data Bulan : ${monthName[month]} ${year}`)
+    .moveDown();
 
   //Susun data dalam format tabel
   const table = {
@@ -107,26 +207,68 @@ async function generateRegionChildrenReportPDF(region) {
       "BB (kg)",
       "TB (cm)",
       "LK (cm)",
+      "LL (cm)",
       "WFA",
       "HFA",
       "WFH",
+      "Tgl Penimbangan",
     ],
-    rows: childrenList.map((child, index) => [
-      index + 1,
-      child.full_name,
-      child.gender === "M" ? "Laki-laki" : "Perempuan",
-      child.place_of_birth,
-      format(new Date(child.date_of_birth), "dd MMMM yyyy", { locale: id }),
-      child.father,
-      child.mother,
-      child.birth_weight,
-      child.birth_height,
-      child.birth_head_circum,
-      child.wfa_status,
-      child.hfa_status,
-      child.wfh_status,
-    ]),
+    rows: [],
   };
+
+  for (let [index, child] of childrenList.entries()) {
+    const childGrowth = await GrowthRepository.getGrowthByMonthYearAndChildId(
+      child.children_id,
+      month,
+      year
+    );
+
+    if (childGrowth.length === 0) {
+      const recentGrowth = await GrowthRepository.getLastGrowthByChildId(
+        child.children_id
+      );
+
+      table.rows.push([
+        index + 1,
+        child.full_name,
+        child.gender === "M" ? "Laki-laki" : "Perempuan",
+        child.place_of_birth,
+        format(new Date(child.date_of_birth), "dd MMMM yyyy", { locale: id }),
+        child.father,
+        child.mother,
+        recentGrowth.dataValues.weight,
+        recentGrowth.dataValues.height,
+        recentGrowth.dataValues.head_circum,
+        recentGrowth.dataValues.arm_circum,
+        recentGrowth.dataValues.wfa_status,
+        recentGrowth.dataValues.hfa_status,
+        recentGrowth.dataValues.wfh_status,
+        format(new Date(recentGrowth.dataValues.date), "dd MMMM yyyy", {
+          locale: id,
+        }),
+      ]);
+    } else {
+      table.rows.push([
+        index + 1,
+        child.full_name,
+        child.gender === "M" ? "Laki-laki" : "Perempuan",
+        child.place_of_birth,
+        format(new Date(child.date_of_birth), "dd MMMM yyyy", { locale: id }),
+        child.father,
+        child.mother,
+        childGrowth.dataValues.weight,
+        childGrowth.dataValues.height,
+        childGrowth.dataValues.head_circum,
+        childGrowth.dataValues.arm_circum,
+        childGrowth.dataValues.wfa_status,
+        childGrowth.dataValues.hfa_status,
+        childGrowth.dataValues.wfh_status,
+        format(new Date(childGrowth.dataValues.date), "dd MMMM yyyy", {
+          locale: id,
+        }),
+      ]);
+    }
+  }
 
   //Buat tabel ke dalam dokumen PDF
   await doc.table(table, {
@@ -134,7 +276,7 @@ async function generateRegionChildrenReportPDF(region) {
     prepareRow: (row, i) => doc.font("Helvetica").fontSize(8),
     padding: 5,
     columnSpacing: 5,
-    columnsSize: [30, 90, 60, 70, 80, 90, 90, 45, 45, 45, 45, 45, 45],
+    columnsSize: [25, 85, 55, 60, 70, 75, 75, 35, 35, 35, 35, 40, 40, 40, 80],
   });
 
   doc.end();
@@ -218,6 +360,14 @@ async function generateRegionParentReportPDF(region) {
     throw new Error(404);
   }
 
+  const posyanduName = {
+    RW1: "PAMUJI 1",
+    RW2: "PAMUJI 2",
+    RW3: "PAMUJI 3",
+    RW4: "PAMUJI 4",
+    RW5: "PAMUJI 5",
+  };
+
   const doc = new PDFDocument({ margin: 30, size: "A4" });
   const buffer = new WritableStreamBuffer();
 
@@ -226,7 +376,7 @@ async function generateRegionParentReportPDF(region) {
   doc
     .font("Helvetica-Bold")
     .fontSize(18)
-    .text(`Daftar Orang Tua Balita Posyandu Wilayah ${region}`, {
+    .text(`Daftar Orang Tua Balita Posyandu Wilayah ${posyanduName(region)}`, {
       align: "center",
     });
   doc.moveDown();
@@ -264,8 +414,6 @@ async function generateRegionParentReportPDF(region) {
     ]);
   }
 
-  const growthClassify = {};
-
   //Buat tabel ke dalam dokumen PDF
   await doc.table(table, {
     prepareHeader: () => doc.font("Helvetica-Bold").fontSize(10),
@@ -294,8 +442,6 @@ async function generateMonthlyReportPDF(currentDate, region) {
   if (officerList.length === 0) {
     throw new Error(404);
   }
-
-  // const currentDate = "2024-06-14 17:00:00.000 Z";
 
   const month = new Date(currentDate).getMonth();
   const year = new Date(currentDate).getFullYear();

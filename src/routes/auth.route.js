@@ -9,8 +9,15 @@ router
   .route("/login")
   .post([validate(requirements.login)], AuthController.login);
 
-router.route("/register/otp-request").post(AuthController.sendOtp);
-router.route("/register/account").post(AuthController.registerAccountParent);
+router
+  .route("/register/otp-request")
+  .post([validate(requirements.createAccount)], AuthController.sendOtp);
+router
+  .route("/register/account")
+  .post(
+    [validate(requirements.createAccount)],
+    AuthController.registerAccountParent
+  );
 
 router
   .route("/register/officer")

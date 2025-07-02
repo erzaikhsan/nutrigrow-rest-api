@@ -47,17 +47,26 @@ async function getEventByRegion(region) {
   return event;
 }
 
-async function getEventByMonth(date, region) {
-  const month = new Date(date).getMonth();
-  const year = new Date(date).getFullYear();
-
-  const events = await EventRepository.getEventByMonth(month, year, region);
+async function getIncomingEvent(date, region) {
+  const events = await EventRepository.getIncomingEvent(date, region);
   if (!events) {
     throw new Error(404);
   }
 
   return events;
 }
+
+// async function getEventByMonth(date, region) {
+//   const month = new Date(date).getMonth();
+//   const year = new Date(date).getFullYear();
+
+//   const events = await EventRepository.getEventByMonth(month, year, region);
+//   if (!events) {
+//     throw new Error(404);
+//   }
+
+//   return events;
+// }
 
 async function getEventToday(date, region) {
   const events = await EventRepository.getEventToday(date, region);
@@ -105,7 +114,7 @@ module.exports = {
   getEvents,
   getEventById,
   getEventByRegion,
-  getEventByMonth,
+  getIncomingEvent,
   getEventToday,
   updateEvent,
   deleteEvent,

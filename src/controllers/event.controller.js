@@ -74,15 +74,15 @@ async function getEventByRegion(req, res) {
   }
 }
 
-async function getEventByMonth(req, res) {
+async function getIncomingEvent(req, res) {
   try {
-    const result = await EventService.getEventByMonth(
+    const result = await EventService.getIncomingEvent(
       req.query.date,
       req.query.region
     );
     res.status(200).json({
       success: true,
-      message: "Get Event By Month Successful",
+      message: "Get Incoming Event Successful",
       data: result,
     });
   } catch (err) {
@@ -164,7 +164,7 @@ module.exports = {
   getEvents,
   getEventById,
   getEventByRegion,
-  getEventByMonth,
+  getIncomingEvent,
   getEventToday,
   updateEvent,
   deleteEvent,

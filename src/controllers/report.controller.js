@@ -4,10 +4,13 @@ const { handle404Response, handle500Response } = require("../utils/response");
 
 async function generateChildrenReportPDF(req, res) {
   try {
-    const pdfBuffer = await ReportService.generateChildrenReportPDF();
+    const pdfBuffer = await ReportService.generateChildrenReportPDF(
+      req.query.currentDate
+    );
     res.set({
       "Content-Type": "application/pdf",
-      "Content-Disposition": 'attachment; filename="data_balita_posyandu.pdf"',
+      "Content-Disposition":
+        'attachment; filename="Data Penimbangan Balita.pdf"',
       "Content-Length": pdfBuffer.length,
     });
 
@@ -24,11 +27,13 @@ async function generateChildrenReportPDF(req, res) {
 async function generateRegionChildrenReportPDF(req, res) {
   try {
     const pdfBuffer = await ReportService.generateRegionChildrenReportPDF(
+      req.query.currentDate,
       req.params.region
     );
     res.set({
       "Content-Type": "application/pdf",
-      "Content-Disposition": 'attachment; filename="data_balita_wilayah.pdf"',
+      "Content-Disposition":
+        'attachment; filename="Data Penimbangan Balita.pdf"',
       "Content-Length": pdfBuffer.length,
     });
 
@@ -47,8 +52,7 @@ async function generateParentReportPDF(req, res) {
     const pdfBuffer = await ReportService.generateParentReportPDF();
     res.set({
       "Content-Type": "application/pdf",
-      "Content-Disposition":
-        'attachment; filename="data_orang_tua_balita_posyandu.pdf"',
+      "Content-Disposition": 'attachment; filename="Data Orang Tua Balita.pdf"',
       "Content-Length": pdfBuffer.length,
     });
 
@@ -69,8 +73,7 @@ async function generateRegionParentReportPDF(req, res) {
     );
     res.set({
       "Content-Type": "application/pdf",
-      "Content-Disposition":
-        'attachment; filename="data_orang_tua_balita_wilayah.pdf"',
+      "Content-Disposition": 'attachment; filename="Data Orang Tua Balita.pdf"',
       "Content-Length": pdfBuffer.length,
     });
 

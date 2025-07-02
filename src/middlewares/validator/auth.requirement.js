@@ -15,6 +15,11 @@ const requirements = {
     body("region").isIn(["RW1", "RW2", "RW3", "RW4", "RW5"]),
   ],
 
+  createAccount: [
+    body("email").isEmail(),
+    body("password").isString().isLength({ min: 8 }),
+  ],
+
   registerOfficer: [
     body("email").isEmail(),
     body("password").isString().isLength({ min: 8 }),

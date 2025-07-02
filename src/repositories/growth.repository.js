@@ -152,6 +152,33 @@ async function getGrowthByMonthYearAndChildId(children_id, month, year) {
   });
 }
 
+async function getGrowthBeforeMonthYear(children_id, month, year) {
+  return GrowthModel.findOne({
+    attributes: [
+      "id",
+      "children_id",
+      "date",
+      "age",
+      "region",
+      "weight",
+      "wfa_status",
+      "height",
+      "hfa_status",
+      "wfh_status",
+      "head_circum",
+      "arm_circum",
+      "note",
+    ],
+    where: {
+      children_id,
+      date: {
+        [Op.lt]: new Date(year, month, 1), // tanggal sebelum awal bulan
+      },
+    },
+    order: [["date", "DESC"]], // ambil data terakhir sebelum tanggal tersebut
+  });
+}
+
 async function getLastGrowthByChildId(children_id) {
   return GrowthModel.findOne({
     where: {
@@ -275,5 +302,6 @@ module.exports = {
   getGrowthOnMonthByChildId,
   updateGrowth,
   getLastGrowthByChildId,
+  getGrowthBeforeMonthYear,
   deleteGrowth,
 };

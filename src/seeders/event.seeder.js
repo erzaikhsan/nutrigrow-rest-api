@@ -29,18 +29,18 @@ const createEvent = (
 
 createEvent(
   uuidv4(),
-  "Imunisasi Bayi Dan Balita",
-  "2025-06-17 17:00:00.000 Z",
+  "Imunisasi Balita",
+  "2025-07-03 17:00:00.000 Z",
   "09:00",
   "11:00",
   "Balai Desa Jipang",
-  "Program imunisasi bayi dan balita di Balai Desa Jipang, tersedia semua jenis vaksin untuk anak. Seluruh orang tua diharapkan membawa anaknya dan jangan lupa membawa buku KIA dan FotoCopy KK yang sudah diberi Nomor HP.",
+  "Program imunisasi balita di Balai Desa Jipang, tersedia semua jenis vaksin untuk anak. Seluruh orang tua diharapkan membawa anaknya dan jangan lupa membawa buku KIA dan FotoCopy KK yang sudah diberi Nomor HP.",
   "Village"
 );
 createEvent(
   uuidv4(),
   "Posyandu Balita RW 1",
-  "2025-06-16 17:00:00.000 Z",
+  "2025-07-14 17:00:00.000 Z",
   "08:00",
   "10:00",
   "Posyandu RW 1",
@@ -50,7 +50,7 @@ createEvent(
 createEvent(
   uuidv4(),
   "Posyandu Balita RW 2",
-  "2025-06-08 17:00:00.000 Z",
+  "2025-07-15 17:00:00.000 Z",
   "08:00",
   "10:00",
   "Posyandu RW 2",
@@ -60,7 +60,7 @@ createEvent(
 createEvent(
   uuidv4(),
   "Posyandu Balita RW 3",
-  "2025-06-10 17:00:00.000 Z",
+  "2025-07-16 17:00:00.000 Z",
   "08:00",
   "10:00",
   "Posyandu RW 3",
@@ -70,7 +70,7 @@ createEvent(
 createEvent(
   uuidv4(),
   "Posyandu Balita RW 4",
-  "2025-06-14 17:00:00.000 Z",
+  "2025-07-17 17:00:00.000 Z",
   "08:00",
   "10:00",
   "Posyandu RW 4",
@@ -81,7 +81,7 @@ createEvent(
 createEvent(
   uuidv4(),
   "Sosialisasi Kesehatan Gizi Balita",
-  "2025-06-09 17:00:00.000 Z",
+  "2025-07-02 17:00:00.000 Z",
   "08:00",
   "10:00",
   "Balai Desa Jipang",

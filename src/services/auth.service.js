@@ -87,7 +87,7 @@ async function registerAccountParent(params) {
     otpRecord.otp !== otp ||
     new Date() > otpRecord.expires_at
   ) {
-    throw new Error(409);
+    throw new Error(401);
   }
 
   const id = uuidv4();

@@ -29,7 +29,6 @@ async function migrateTables() {
   await EventModel.sync({ force: true });
   await VaccineModel.sync({ force: true });
   await OtpModel.sync({ force: true });
-  // await CheckModel.sync({ force: true });
 }
 
 async function seedData() {
@@ -40,7 +39,6 @@ async function seedData() {
   await GrowthSeeder();
   await EventSeeder();
   await VaccineSeeder();
-  // await CheckSeeder();
 }
 
 async function syncDatabase() {

@@ -24,8 +24,8 @@ router
   .delete([authMiddleware.authenticate], EventController.deleteEvent);
 
 router
-  .route("/date/month")
-  .get([authMiddleware.authenticate], EventController.getEventByMonth);
+  .route("/incoming/event")
+  .get([authMiddleware.authenticate], EventController.getIncomingEvent);
 
 router
   .route("/today/reminder")
