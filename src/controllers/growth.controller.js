@@ -77,6 +77,23 @@ async function getGrowthByChildId(req, res) {
   }
 }
 
+async function getGrowthByChildIdInYear(req, res) {
+  try {
+    const result = await GrowthService.getGrowthByChildIdInYear(req.params.childId, req.query.year);
+    res.status(200).json({
+      success: true,
+      message: "Get Growth By Children Id In Year Successful",
+      data: result,
+    });
+  } catch (err) {
+    if (err.message == 404) {
+      return handle404Response(res);
+    }
+    logger.error({ status: 500, error: err });
+    handle500Response(res);
+  }
+}
+
 async function getGrowthByMonthYearAndChildId(req, res) {
   try {
     const result = await GrowthService.getGrowthByMonthYearAndChildId(
@@ -187,6 +204,7 @@ module.exports = {
   getGrowth,
   getGrowthById,
   getGrowthByChildId,
+  getGrowthByChildIdInYear,
   getGrowthByMonthYearAndChildId,
   // getGrowthOnMonth,
   updateGrowth,

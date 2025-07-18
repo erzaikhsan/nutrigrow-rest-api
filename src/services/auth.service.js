@@ -17,6 +17,17 @@ async function login({ email, password }) {
     throw new Error(401);
   }
 
+  if (user.dataValues.active_period < new Date()) {
+    await UserRepository.deactiveAccount({
+      id: user.dataValues.id,
+      email: user.dataValues.email,
+      password: user.dataValues.password,
+      role: user.dataValues.role,
+      is_active: false,
+    });
+    throw new Error(403);
+  }
+
   if (user.dataValues.is_active === false) {
     throw new Error(403);
   }
@@ -26,13 +37,6 @@ async function login({ email, password }) {
     throw new Error(401);
   }
 
-  let data;
-  if (user.dataValues.role === "Parent") {
-    data = await ParentRepository.getParentById(user.dataValues.id);
-  } else {
-    data = await OfficerRepository.getOfficerById(user.dataValues.id);
-  }
-
   const authUser = { id: user.dataValues.id, role: user.dataValues.role };
 
   const token = sign(authUser, secretKey, { expiresIn: "24h" });
@@ -40,7 +44,7 @@ async function login({ email, password }) {
   return {
     id: user.dataValues.id,
     role: user.dataValues.role,
-    region: data.dataValues.region,
+    region: user.dataValues.region,
     token,
   };
 }
@@ -67,14 +71,14 @@ async function sendOtpToEmail(email, password) {
   await transporter.sendMail({
     from: '"NutriGrow" <nutrigrowapp@gmail.com>',
     to: email,
-    subject: "Your OTP Code",
-    text: `Verify your NutriGrow register! Your OTP Code is: ${otp}`,
+    subject: "Verification Code",
+    text: `Verify your NutriGrow register. Your OTP Code is: ${otp} (valid for 10 minutes)`,
   });
   return { email: email, password: password };
 }
 
-async function registerAccountParent(params) {
-  const { email, password, otp } = params;
+async function verifyAccount(params) {
+  const { email, otp } = params;
 
   const emailExist = await UserRepository.getUserByEmail(email);
   if (emailExist) {
@@ -83,53 +87,47 @@ async function registerAccountParent(params) {
 
   const otpRecord = await AuthRepository.getOtpByEmail(email);
   if (
-    !otpRecord ||
-    otpRecord.otp !== otp ||
-    new Date() > otpRecord.expires_at
+    otpRecord.dataValues.otp != otp ||
+    otpRecord.dataValues.expires_at < new Date()
   ) {
     throw new Error(401);
   }
 
-  const id = uuidv4();
-  const role = "Parent";
-  const hashedPass = await bcrypt.hash(password, 10);
-  const register = await ParentRepository.registerAccount({
-    id,
-    email,
-    password: hashedPass,
-    role,
-    is_active: false,
-  });
-  return register;
+  return {
+    email: email,
+    otp: otp,
+  };
 }
 
 async function registerParent(params) {
   const {
     email,
+    password,
     full_name,
     gender,
     date_of_birth,
     phone_number,
     address,
     region,
+    active_period,
   } = params;
 
-  const parentExist = await UserRepository.getUserByEmail(email);
-  if (!parentExist) {
-    throw new Error(409);
-  }
+  const id = uuidv4();
+  const role = "Parent";
+  const hashedPass = await bcrypt.hash(password, 10);
 
   const register = await ParentRepository.registerParent({
-    id: parentExist.dataValues.id,
+    id,
     email,
-    password: parentExist.dataValues.password,
-    role: parentExist.dataValues.role,
+    password: hashedPass,
+    role,
     full_name,
     gender,
     date_of_birth,
     phone_number,
     address,
     region,
+    active_period,
   });
   return register;
 }
@@ -144,6 +142,7 @@ async function registerOfficer(params) {
     phone_number,
     address,
     region,
+    active_period,
   } = params;
 
   const emailExist = await UserRepository.getUserByEmail(email);
@@ -153,6 +152,7 @@ async function registerOfficer(params) {
   const id = uuidv4();
   const role = "Officer";
   const hashedPass = await bcrypt.hash(password, 10);
+
   const register = await OfficerRepository.registerOfficer({
     id,
     email,
@@ -165,6 +165,7 @@ async function registerOfficer(params) {
     phone_number,
     address,
     region,
+    active_period,
   });
   return register;
 }
@@ -201,7 +202,7 @@ async function activeAccount(id) {
 
 module.exports = {
   login,
-  registerAccountParent,
+  verifyAccount,
   registerParent,
   registerOfficer,
   sendOtpToEmail,

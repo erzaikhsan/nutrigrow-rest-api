@@ -21,6 +21,7 @@ async function addChildren(params) {
     father,
     mother,
     region,
+    order_of_child,
     birth_weight,
     birth_height,
     birth_head_circum,
@@ -31,6 +32,15 @@ async function addChildren(params) {
     parents_id
   );
   if (childExist.length > 0) {
+    throw new Error(409);
+  }
+
+  const siblings = await ChildrenRepository.getChildrenByParentId(parents_id);
+
+  const isOrderUsed = siblings.some(
+    (child) => child.order_of_child == order_of_child
+  );
+  if (isOrderUsed) {
     throw new Error(409);
   }
 
@@ -57,6 +67,7 @@ async function addChildren(params) {
     date_of_birth,
     father,
     mother,
+    order_of_child,
     region,
     growthId,
     age,
@@ -143,6 +154,7 @@ async function updateChildren(data) {
     date_of_birth,
     father,
     mother,
+    order_of_child,
     region,
     birth_weight,
     birth_height,
@@ -152,6 +164,17 @@ async function updateChildren(data) {
   const childExist = await ChildrenRepository.getChildrenById(children_id);
   if (!childExist) {
     throw new Error(403);
+  }
+
+  const siblings = await ChildrenRepository.getChildrenByParentId(
+    childExist.dataValues.parents_id
+  );
+
+  const isOrderUsed = siblings.some(
+    (child) => child.order_of_child == order_of_child
+  );
+  if (isOrderUsed) {
+    throw new Error(409);
   }
 
   const month = new Date(childExist.dataValues.date_of_birth).getMonth();
@@ -190,6 +213,7 @@ async function updateChildren(data) {
     date_of_birth,
     father,
     mother,
+    order_of_child,
     region,
     birth_weight: parseFloat(birth_weight),
     wfa_status: wfaStatus,

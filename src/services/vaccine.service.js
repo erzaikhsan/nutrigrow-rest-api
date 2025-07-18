@@ -2,7 +2,7 @@ const { VaccineRepository, ChildrenRepository } = require("../repositories");
 const { v4: uuidv4 } = require("uuid");
 
 async function addVaccine(params) {
-  const { children_id, date, vaccine_name } = params;
+  const { children_id, date, vaccine_name, place } = params;
 
   const childExist = await ChildrenRepository.getChildrenById(children_id);
   if (!childExist) {
@@ -23,6 +23,7 @@ async function addVaccine(params) {
     children_id,
     date,
     vaccine_name,
+    place,
   });
 
   return vaccine;
@@ -52,7 +53,7 @@ async function getVaccineByChildId(childId) {
 }
 
 async function updateVaccine(data) {
-  const { id, children_id, date, vaccine_name } = data;
+  const { id, children_id, date, vaccine_name, place } = data;
 
   const childExist = await ChildrenRepository.getChildrenById(children_id);
   if (!childExist) {
@@ -78,6 +79,7 @@ async function updateVaccine(data) {
     children_id,
     date,
     vaccine_name,
+    place,
   });
 }
 

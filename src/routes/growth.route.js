@@ -24,6 +24,10 @@ router
   .delete([authMiddleware.authenticate], GrowthController.deleteGrowth);
 
 router
+  .route("/year/:childId")
+  .get([authMiddleware.authenticate], GrowthController.getGrowthByChildIdInYear);
+
+router
   .route("/children/:childId")
   .get([authMiddleware.authenticate], GrowthController.getGrowthByChildId);
 

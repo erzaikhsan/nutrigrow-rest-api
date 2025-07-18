@@ -36,6 +36,15 @@ async function getParentByName(name) {
   return parent;
 }
 
+async function getParentByNameAndRegion(name, region) {
+  const parent = await ParentRepository.getParentByNameAndRegion(name, region);
+  if (!parent) {
+    throw new Error(404);
+  }
+
+  return parent;
+}
+
 async function getParentsByRegion(region) {
   const parent = await ParentRepository.getParentsByRegion(region);
   if (!parent) {
@@ -68,6 +77,7 @@ module.exports = {
   getParentAccount,
   getParentById,
   getParentByName,
+  getParentByNameAndRegion,
   getParentsByRegion,
   updateParent,
   deleteParent,

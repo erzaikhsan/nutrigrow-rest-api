@@ -27,12 +27,12 @@ async function login(req, res) {
   }
 }
 
-async function registerAccountParent(req, res) {
+async function verifyAccount(req, res) {
   try {
-    const result = await AuthService.registerAccountParent(req.body);
+    const result = await AuthService.verifyAccount(req.body);
     res.status(201).json({
       success: true,
-      message: "Account Register Successful",
+      message: "Verify Account Successful",
       data: result,
     });
   } catch (err) {
@@ -51,6 +51,7 @@ async function registerParent(req, res) {
   try {
     const {
       email,
+      password,
       full_name,
       gender,
       date_of_birth,
@@ -60,6 +61,7 @@ async function registerParent(req, res) {
     } = req.body;
     const result = await AuthService.registerParent({
       email,
+      password,
       full_name,
       gender,
       date_of_birth,
@@ -147,7 +149,7 @@ async function activeAccount(req, res) {
 
 module.exports = {
   login,
-  registerAccountParent,
+  verifyAccount,
   registerParent,
   registerOfficer,
   sendOtp,

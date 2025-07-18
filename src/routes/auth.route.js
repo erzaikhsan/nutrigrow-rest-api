@@ -12,12 +12,7 @@ router
 router
   .route("/register/otp-request")
   .post([validate(requirements.createAccount)], AuthController.sendOtp);
-router
-  .route("/register/account")
-  .post(
-    [validate(requirements.createAccount)],
-    AuthController.registerAccountParent
-  );
+router.route("/register/verify").post(AuthController.verifyAccount);
 
 router
   .route("/register/officer")

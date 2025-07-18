@@ -141,6 +141,7 @@ async function updateChildren(req, res) {
       date_of_birth,
       father,
       mother,
+      order_of_child,
       region,
       birth_weight,
       birth_height,
@@ -155,6 +156,7 @@ async function updateChildren(req, res) {
       date_of_birth,
       father,
       mother,
+      order_of_child,
       region,
       birth_weight,
       birth_height,
@@ -166,8 +168,8 @@ async function updateChildren(req, res) {
       data: result,
     });
   } catch (err) {
-    if (err.message == 404) {
-      return handle404Response(res);
+    if (err.message == 409) {
+      return handle409Response(res);
     }
     logger.error({ status: 500, error: err });
     handle500Response(res);

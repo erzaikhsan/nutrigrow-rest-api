@@ -101,6 +101,34 @@ async function getGrowthByChildId(childId) {
   });
 }
 
+async function getGrowthByChildIdInYear(childId, year) {
+  return GrowthModel.findAll({
+    attributes: [
+      "id",
+      "children_id",
+      "date",
+      "age",
+      "region",
+      "weight",
+      "wfa_status",
+      "height",
+      "hfa_status",
+      "wfh_status",
+      "head_circum",
+      "arm_circum",
+      "note",
+    ],
+    order: [["date", "DESC"]],
+    where: {
+      children_id: childId,
+      date: {
+        [Op.gte]: new Date(year, 0, 1),
+        [Op.lt]: new Date(year + 1, 0, 1),
+      },
+    },
+  });
+}
+
 async function getGrowthByRegion(region) {
   return GrowthModel.findAll({
     attributes: [
@@ -302,6 +330,7 @@ module.exports = {
   getGrowthOnMonthByChildId,
   updateGrowth,
   getLastGrowthByChildId,
+  getGrowthByChildIdInYear,
   getGrowthBeforeMonthYear,
   deleteGrowth,
 };

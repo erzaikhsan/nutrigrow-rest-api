@@ -51,7 +51,6 @@ async function addGrowth(params) {
     parseFloat(height),
     childExist.gender
   );
-  console.log("WFHStatus", wfhStatus);
 
   const growth = await GrowthRepository.addGrowth({
     id,
@@ -97,6 +96,20 @@ async function getGrowthByChildId(childId) {
   }
 
   const growth = await GrowthRepository.getGrowthByChildId(childId);
+  if (!growth) {
+    throw new Error(404);
+  }
+
+  return growth;
+}
+
+async function getGrowthByChildIdInYear(childId, year) {
+  const childExist = await ChildrenRepository.getChildrenById(childId);
+  if (!childExist) {
+    throw new Error(404);
+  }
+
+  const growth = await GrowthRepository.getGrowthByChildIdInYear(childId, year);
   if (!growth) {
     throw new Error(404);
   }
@@ -230,6 +243,7 @@ module.exports = {
   getGrowth,
   getGrowthById,
   getGrowthByChildId,
+  getGrowthByChildIdInYear,
   getGrowthByMonthYearAndChildId,
   // getGrowthOnMonth,
   updateGrowth,

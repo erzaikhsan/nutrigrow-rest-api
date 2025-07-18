@@ -19,6 +19,10 @@ router
   .get([authMiddleware.authenticate], ParentController.getParentByName);
 
 router
+  .route("/name/:region")
+  .get([authMiddleware.authenticate], ParentController.getParentByNameAndRegion);
+
+router
   .route("/:id")
   .get([authMiddleware.authenticate], ParentController.getParentById)
   .delete([authMiddleware.authenticate], ParentController.deleteParent);

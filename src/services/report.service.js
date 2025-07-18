@@ -9,14 +9,13 @@ const { WritableStreamBuffer } = require("stream-buffers");
 const { format } = require("date-fns");
 const { id, ro } = require("date-fns/locale");
 
-async function generateChildrenReportPDF(currentDate) {
+async function generateChildrenReportPDF(currentMonth, year) {
   const childrenList = await ChildrenRepository.getChildren();
   if (childrenList.length === 0) {
     throw new Error(404);
   }
 
-  const month = new Date(currentDate).getMonth();
-  const year = new Date(currentDate).getFullYear();
+  const month = currentMonth - 1;
 
   const monthName = [
     "Januari",
@@ -112,14 +111,14 @@ async function generateChildrenReportPDF(currentDate) {
         format(new Date(child.date_of_birth), "dd MMMM yyyy", { locale: id }),
         child.father,
         child.mother,
-        childGrowth.dataValues.weight,
-        childGrowth.dataValues.height,
-        childGrowth.dataValues.head_circum,
-        childGrowth.dataValues.arm_circum,
-        childGrowth.dataValues.wfa_status,
-        childGrowth.dataValues.hfa_status,
-        childGrowth.dataValues.wfh_status,
-        format(new Date(childGrowth.dataValues.date), "dd MMMM yyyy", {
+        childGrowth[0].dataValues.weight,
+        childGrowth[0].dataValues.height,
+        childGrowth[0].dataValues.head_circum,
+        childGrowth[0].dataValues.arm_circum,
+        childGrowth[0].dataValues.wfa_status,
+        childGrowth[0].dataValues.hfa_status,
+        childGrowth[0].dataValues.wfh_status,
+        format(new Date(childGrowth[0].dataValues.date), "dd MMMM yyyy", {
           locale: id,
         }),
       ]);
@@ -143,14 +142,13 @@ async function generateChildrenReportPDF(currentDate) {
   });
 }
 
-async function generateRegionChildrenReportPDF(currentDate, region) {
+async function generateRegionChildrenReportPDF(currentMonth, year, region) {
   const childrenList = await ChildrenRepository.getChildrenByRegion(region);
   if (childrenList.length === 0) {
     throw new Error(404);
   }
 
-  const month = new Date(currentDate).getMonth();
-  const year = new Date(currentDate).getFullYear();
+  const month = currentMonth - 1;
 
   const monthName = [
     "Januari",
@@ -183,7 +181,7 @@ async function generateRegionChildrenReportPDF(currentDate, region) {
   doc
     .font("Helvetica-Bold")
     .fontSize(18)
-    .text(`Data Hasil Penimbangan Balita ${posyanduName(region)}`, {
+    .text(`Data Hasil Penimbangan Balita ${posyanduName[region]}`, {
       align: "center",
     });
   doc.moveDown(1);
@@ -256,14 +254,14 @@ async function generateRegionChildrenReportPDF(currentDate, region) {
         format(new Date(child.date_of_birth), "dd MMMM yyyy", { locale: id }),
         child.father,
         child.mother,
-        childGrowth.dataValues.weight,
-        childGrowth.dataValues.height,
-        childGrowth.dataValues.head_circum,
-        childGrowth.dataValues.arm_circum,
-        childGrowth.dataValues.wfa_status,
-        childGrowth.dataValues.hfa_status,
-        childGrowth.dataValues.wfh_status,
-        format(new Date(childGrowth.dataValues.date), "dd MMMM yyyy", {
+        childGrowth[0].dataValues.weight,
+        childGrowth[0].dataValues.height,
+        childGrowth[0].dataValues.head_circum,
+        childGrowth[0].dataValues.arm_circum,
+        childGrowth[0].dataValues.wfa_status,
+        childGrowth[0].dataValues.hfa_status,
+        childGrowth[0].dataValues.wfh_status,
+        format(new Date(childGrowth[0].dataValues.date), "dd MMMM yyyy", {
           locale: id,
         }),
       ]);
@@ -321,7 +319,7 @@ async function generateParentReportPDF() {
 
   for (let [index, parent] of parentsList.entries()) {
     const childrenList = await ChildrenRepository.getChildrenByParentId(
-      parent.user_id
+      parent.id
     );
     const jumlahBalita = childrenList?.length || 0;
 
@@ -376,7 +374,7 @@ async function generateRegionParentReportPDF(region) {
   doc
     .font("Helvetica-Bold")
     .fontSize(18)
-    .text(`Daftar Orang Tua Balita Posyandu Wilayah ${posyanduName(region)}`, {
+    .text(`Daftar Orang Tua Balita Posyandu Wilayah ${posyanduName[region]}`, {
       align: "center",
     });
   doc.moveDown();
@@ -398,7 +396,7 @@ async function generateRegionParentReportPDF(region) {
 
   for (let [index, parent] of parentsList.entries()) {
     const childrenList = await ChildrenRepository.getChildrenByParentId(
-      parent.user_id
+      parent.id
     );
     const jumlahBalita = childrenList?.length || 0;
 
@@ -432,7 +430,7 @@ async function generateRegionParentReportPDF(region) {
 }
 
 //LAPORAN BULANAN
-async function generateMonthlyReportPDF(currentDate, region) {
+async function generateMonthlyReportPDF(currentMonth, year, region) {
   const childrenList = await ChildrenRepository.getChildrenByRegion(region);
   if (childrenList.length === 0) {
     throw new Error(404);
@@ -443,8 +441,7 @@ async function generateMonthlyReportPDF(currentDate, region) {
     throw new Error(404);
   }
 
-  const month = new Date(currentDate).getMonth();
-  const year = new Date(currentDate).getFullYear();
+  const month = currentMonth - 1;
 
   let prevMonth = month - 1;
   let prevYear = year;
@@ -507,37 +504,43 @@ async function generateMonthlyReportPDF(currentDate, region) {
   };
 
   const upgkRow1 = countAllChildrenByAgeAndGender(
-    currentDate,
+    month,
+    year,
     "Jumlah semua Balita yang ada di Posyandu",
     childrenList
   );
   const upgkRow2 = countAllChildrenByAgeAndGender(
-    currentDate,
+    month,
+    year,
     "Jumlah Balita yang terdaftar dan mempunyai KMS bulan ini",
     childrenList
   );
   const upgkRow3 = countChildrenWeighedThisMonth(
-    currentDate,
+    month,
+    year,
     "Jumlah Balita yang ditimbang bulan ini",
     childrenList,
     growthList
   );
   const upgkRow4 = countChildrenWithWeightGain(
-    currentDate,
+    month,
+    year,
     "Jumlah Balita yang naik berat badannya bulan ini",
     childrenList,
     growthList,
     prevGrowthList
   );
   const upgkRow5 = countChildrenWithWeightLoss(
-    currentDate,
+    month,
+    year,
     "Jumlah Balita yang tidak naik berat badannya 1 kali bulan ini",
     childrenList,
     growthList,
     prevGrowthList
   );
   const upgkRow6 = countChildrenWithWeightDoubleLoss(
-    currentDate,
+    month,
+    year,
     "Jumlah Balita yang tidak naik berat badannya 2 kali bulan ini",
     childrenList,
     growthList,
@@ -545,61 +548,71 @@ async function generateMonthlyReportPDF(currentDate, region) {
     prev2GrowthList
   );
   const upgkRow7 = countChildrenNotWeighedPrevMonth(
-    currentDate,
+    month,
+    year,
     "Jumlah Balita yang bulan sebelumnya tidak menimbang",
     childrenList,
     growthList,
     prevGrowthList
   );
   const upgkRow8 = countAllNewChildren(
-    currentDate,
+    month,
+    year,
     "Jumlah Bayi Baru",
     childrenList
   );
   const upgkRow9 = countSevUnderweightChildren(
-    currentDate,
+    month,
+    year,
     "Jumlah Balita Berat Badan Sangat Kurang (Severely Underweight) Berdasarkan Indikator BB/U",
     childrenList,
     growthList
   );
   const upgkRow10 = countUnderweightChildren(
-    currentDate,
+    month,
+    year,
     "Jumlah Balita Berat Badan Kurang (Underweight) Berdasarkan Indikator BB/U",
     childrenList,
     growthList
   );
   const upgkRow11 = countOverweightChildren(
-    currentDate,
+    month,
+    year,
     "Jumlah Balita Berat Badan Lebih (Overweight) Berdasarkan Indikator BB/U",
     childrenList,
     growthList
   );
   const upgkRow12 = countSevStuntedChildren(
-    currentDate,
+    month,
+    year,
     "Jumlah Balita Sangat Pendek (Severely Stunting) Berdasarkan Indikator TB/U",
     childrenList,
     growthList
   );
   const upgkRow13 = countStuntedChildren(
-    currentDate,
+    month,
+    year,
     "Jumlah Balita Pendek (Stunting) Berdasarkan Indikator TB/U",
     childrenList,
     growthList
   );
   const upgkRow14 = countSevWastedChildren(
-    currentDate,
+    month,
+    year,
     "Jumlah Balita Gizi Buruk (Severely Wasting) Berdasarkan Indikator BB/TB",
     childrenList,
     growthList
   );
   const upgkRow15 = countWastedChildren(
-    currentDate,
+    month,
+    year,
     "Jumlah Balita Gizi Kurang (Wasting) Berdasarkan Indikator BB/TB",
     childrenList,
     growthList
   );
   const upgkRow16 = countObeseChildren(
-    currentDate,
+    month,
+    year,
     "Jumlah Balita Gizi Lebih (Overweight and Obesse) Berdasarkan Indikator BB/TB",
     childrenList,
     growthList
@@ -727,8 +740,8 @@ function initUPGKRow(label) {
   };
 }
 
-function getAgeInMonths(date, dateOfBirth) {
-  const now = new Date(date);
+function getAgeInMonths(month, year, dateOfBirth) {
+  const now = new Date(year, month - 1);
   const dob = new Date(dateOfBirth);
 
   let months =
@@ -753,11 +766,11 @@ function getAgeGroup(ageInMonths) {
 
 //Fungsi Utama Setiap Baris
 //Baris 1, 2
-function countAllChildrenByAgeAndGender(date, eventTitle, childrenList) {
+function countAllChildrenByAgeAndGender(month, year, eventTitle, childrenList) {
   const result = initUPGKRow(eventTitle);
 
   for (const child of childrenList) {
-    const age = getAgeInMonths(date, child.date_of_birth);
+    const age = getAgeInMonths(month, year, child.date_of_birth);
     if (age < 0) continue;
 
     const group = getAgeGroup(age);
@@ -777,7 +790,8 @@ function countAllChildrenByAgeAndGender(date, eventTitle, childrenList) {
 
 // Baris 3
 function countChildrenWeighedThisMonth(
-  date,
+  month,
+  year,
   eventTitle,
   childrenList,
   growthList
@@ -790,7 +804,7 @@ function countChildrenWeighedThisMonth(
     );
     if (!child) continue;
 
-    const age = getAgeInMonths(date, child.date_of_birth);
+    const age = getAgeInMonths(month, year, child.date_of_birth);
     if (age < 0) continue;
 
     const group = getAgeGroup(age);
@@ -810,7 +824,8 @@ function countChildrenWeighedThisMonth(
 
 //Baris 4
 function countChildrenWithWeightGain(
-  date,
+  month,
+  year,
   eventTitle,
   childrenList,
   currentGrowthList,
@@ -837,7 +852,7 @@ function countChildrenWithWeightGain(
     if (!current || !previous) continue;
 
     if (current.weight > previous.weight) {
-      const age = getAgeInMonths(date, child.date_of_birth);
+      const age = getAgeInMonths(month, year, child.date_of_birth);
       if (age < 0) continue;
 
       const group = getAgeGroup(age);
@@ -858,7 +873,8 @@ function countChildrenWithWeightGain(
 
 //Baris 5
 function countChildrenWithWeightLoss(
-  date,
+  month,
+  year,
   eventTitle,
   childrenList,
   currentGrowthList,
@@ -885,7 +901,7 @@ function countChildrenWithWeightLoss(
     if (!current || !previous) continue;
 
     if (current.weight < previous.weight) {
-      const age = getAgeInMonths(date, child.date_of_birth);
+      const age = getAgeInMonths(month, year, child.date_of_birth);
       if (age < 0) continue;
 
       const group = getAgeGroup(age);
@@ -906,7 +922,8 @@ function countChildrenWithWeightLoss(
 
 //Baris 6
 function countChildrenWithWeightDoubleLoss(
-  date,
+  month,
+  year,
   eventTitle,
   childrenList,
   currentGrowthList,
@@ -946,7 +963,7 @@ function countChildrenWithWeightDoubleLoss(
     const secondNoGain = current.weight <= prev1.weight;
 
     if (firstNoGain && secondNoGain) {
-      const age = getAgeInMonths(date, child.date_of_birth);
+      const age = getAgeInMonths(month, year, child.date_of_birth);
       if (age < 0) continue;
 
       const group = getAgeGroup(age);
@@ -966,7 +983,8 @@ function countChildrenWithWeightDoubleLoss(
 
 //Baris 7
 function countChildrenNotWeighedPrevMonth(
-  date,
+  month,
+  year,
   eventTitle,
   childrenList,
   currentGrowthList,
@@ -991,7 +1009,7 @@ function countChildrenNotWeighedPrevMonth(
     const previous = previousMap.get(child.children_id);
 
     if (current && !previous) {
-      const age = getAgeInMonths(date, child.date_of_birth);
+      const age = getAgeInMonths(month, year, child.date_of_birth);
       if (age < 0) continue;
 
       const group = getAgeGroup(age);
@@ -1011,11 +1029,11 @@ function countChildrenNotWeighedPrevMonth(
 }
 
 //Baris 8
-function countAllNewChildren(date, eventTitle, childrenList) {
+function countAllNewChildren(month, year, eventTitle, childrenList) {
   const result = initUPGKRow(eventTitle);
 
   for (const child of childrenList) {
-    const age = getAgeInMonths(date, child.date_of_birth);
+    const age = getAgeInMonths(month, year, child.date_of_birth);
     if (age < 0 || age > 4) continue;
 
     const group = getAgeGroup(age);
@@ -1035,7 +1053,8 @@ function countAllNewChildren(date, eventTitle, childrenList) {
 
 //Baris 9
 function countSevUnderweightChildren(
-  date,
+  month,
+  year,
   eventTitle,
   childrenList,
   growthList
@@ -1053,7 +1072,7 @@ function countSevUnderweightChildren(
     if (!growth) continue;
 
     if (growth.wfa_status === "Severely Underweight") {
-      const age = getAgeInMonths(date, child.date_of_birth);
+      const age = getAgeInMonths(month, year, child.date_of_birth);
       if (age < 0) continue;
 
       const group = getAgeGroup(age);
@@ -1073,7 +1092,13 @@ function countSevUnderweightChildren(
 }
 
 //Baris 10
-function countUnderweightChildren(date, eventTitle, childrenList, growthList) {
+function countUnderweightChildren(
+  month,
+  year,
+  eventTitle,
+  childrenList,
+  growthList
+) {
   const result = initUPGKRow(eventTitle);
 
   // Buat Map growth data
@@ -1087,7 +1112,7 @@ function countUnderweightChildren(date, eventTitle, childrenList, growthList) {
     if (!growth) continue;
 
     if (growth.wfa_status === "Underweight") {
-      const age = getAgeInMonths(date, child.date_of_birth);
+      const age = getAgeInMonths(month, year, child.date_of_birth);
       if (age < 0) continue;
 
       const group = getAgeGroup(age);
@@ -1107,7 +1132,13 @@ function countUnderweightChildren(date, eventTitle, childrenList, growthList) {
 }
 
 //Baris 11
-function countOverweightChildren(date, eventTitle, childrenList, growthList) {
+function countOverweightChildren(
+  month,
+  year,
+  eventTitle,
+  childrenList,
+  growthList
+) {
   const result = initUPGKRow(eventTitle);
 
   // Buat Map growth data
@@ -1121,7 +1152,7 @@ function countOverweightChildren(date, eventTitle, childrenList, growthList) {
     if (!growth) continue;
 
     if (growth.wfa_status === "Overweight and Obese") {
-      const age = getAgeInMonths(date, child.date_of_birth);
+      const age = getAgeInMonths(month, year, child.date_of_birth);
       if (age < 0) continue;
 
       const group = getAgeGroup(age);
@@ -1141,7 +1172,13 @@ function countOverweightChildren(date, eventTitle, childrenList, growthList) {
 }
 
 //Baris 12
-function countSevStuntedChildren(date, eventTitle, childrenList, growthList) {
+function countSevStuntedChildren(
+  month,
+  year,
+  eventTitle,
+  childrenList,
+  growthList
+) {
   const result = initUPGKRow(eventTitle);
 
   // Buat Map growth data
@@ -1155,7 +1192,7 @@ function countSevStuntedChildren(date, eventTitle, childrenList, growthList) {
     if (!growth) continue;
 
     if (growth.hfa_status === "Severely Stunted") {
-      const age = getAgeInMonths(date, child.date_of_birth);
+      const age = getAgeInMonths(month, year, child.date_of_birth);
       if (age < 0) continue;
 
       const group = getAgeGroup(age);
@@ -1175,7 +1212,13 @@ function countSevStuntedChildren(date, eventTitle, childrenList, growthList) {
 }
 
 //Baris 13
-function countStuntedChildren(date, eventTitle, childrenList, growthList) {
+function countStuntedChildren(
+  month,
+  year,
+  eventTitle,
+  childrenList,
+  growthList
+) {
   const result = initUPGKRow(eventTitle);
 
   // Buat Map growth data
@@ -1189,7 +1232,7 @@ function countStuntedChildren(date, eventTitle, childrenList, growthList) {
     if (!growth) continue;
 
     if (growth.hfa_status === "Stunted") {
-      const age = getAgeInMonths(date, child.date_of_birth);
+      const age = getAgeInMonths(month, year, child.date_of_birth);
       if (age < 0) continue;
 
       const group = getAgeGroup(age);
@@ -1209,7 +1252,13 @@ function countStuntedChildren(date, eventTitle, childrenList, growthList) {
 }
 
 //Baris 14
-function countSevWastedChildren(date, eventTitle, childrenList, growthList) {
+function countSevWastedChildren(
+  month,
+  year,
+  eventTitle,
+  childrenList,
+  growthList
+) {
   const result = initUPGKRow(eventTitle);
 
   // Buat Map growth data
@@ -1223,7 +1272,7 @@ function countSevWastedChildren(date, eventTitle, childrenList, growthList) {
     if (!growth) continue;
 
     if (growth.wfh_status === "Severely Wasting") {
-      const age = getAgeInMonths(date, child.date_of_birth);
+      const age = getAgeInMonths(month, year, child.date_of_birth);
       if (age < 0) continue;
 
       const group = getAgeGroup(age);
@@ -1243,7 +1292,13 @@ function countSevWastedChildren(date, eventTitle, childrenList, growthList) {
 }
 
 //Baris 15
-function countWastedChildren(date, eventTitle, childrenList, growthList) {
+function countWastedChildren(
+  month,
+  year,
+  eventTitle,
+  childrenList,
+  growthList
+) {
   const result = initUPGKRow(eventTitle);
 
   // Buat Map growth data
@@ -1257,7 +1312,7 @@ function countWastedChildren(date, eventTitle, childrenList, growthList) {
     if (!growth) continue;
 
     if (growth.wfh_status === "Wasting") {
-      const age = getAgeInMonths(date, child.date_of_birth);
+      const age = getAgeInMonths(month, year, child.date_of_birth);
       if (age < 0) continue;
 
       const group = getAgeGroup(age);
@@ -1277,7 +1332,7 @@ function countWastedChildren(date, eventTitle, childrenList, growthList) {
 }
 
 //Baris 16
-function countObeseChildren(date, eventTitle, childrenList, growthList) {
+function countObeseChildren(month, year, eventTitle, childrenList, growthList) {
   const result = initUPGKRow(eventTitle);
 
   // Buat Map growth data
@@ -1291,7 +1346,7 @@ function countObeseChildren(date, eventTitle, childrenList, growthList) {
     if (!growth) continue;
 
     if (growth.wfh_status === "Overweight and Obese") {
-      const age = getAgeInMonths(date, child.date_of_birth);
+      const age = getAgeInMonths(month, year, child.date_of_birth);
       if (age < 0) continue;
 
       const group = getAgeGroup(age);

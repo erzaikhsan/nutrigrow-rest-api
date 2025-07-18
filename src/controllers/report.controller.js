@@ -5,7 +5,8 @@ const { handle404Response, handle500Response } = require("../utils/response");
 async function generateChildrenReportPDF(req, res) {
   try {
     const pdfBuffer = await ReportService.generateChildrenReportPDF(
-      req.query.currentDate
+      req.query.month,
+      req.query.year
     );
     res.set({
       "Content-Type": "application/pdf",
@@ -27,7 +28,8 @@ async function generateChildrenReportPDF(req, res) {
 async function generateRegionChildrenReportPDF(req, res) {
   try {
     const pdfBuffer = await ReportService.generateRegionChildrenReportPDF(
-      req.query.currentDate,
+      req.query.month,
+      req.query.year,
       req.params.region
     );
     res.set({
@@ -90,7 +92,8 @@ async function generateRegionParentReportPDF(req, res) {
 async function generateMonthlyReportPDF(req, res) {
   try {
     const pdfBuffer = await ReportService.generateMonthlyReportPDF(
-      req.query.currentDate,
+      req.query.month,
+      req.query.year,
       req.params.region
     );
     res.set({

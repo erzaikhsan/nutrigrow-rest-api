@@ -1,7 +1,7 @@
 const {
   UserModel,
-  ParentModel,
-  OfficerModel,
+  // ParentModel,
+  // OfficerModel,
   ChildrenModel,
   GrowthModel,
   EventModel,
@@ -11,8 +11,8 @@ const {
 
 const {
   UserSeeder,
-  ParentSeeder,
-  OfficerSeeder,
+  // ParentSeeder,
+  // OfficerSeeder,
   ChildrenSeeder,
   GrowthSeeder,
   EventSeeder,
@@ -22,8 +22,6 @@ const logger = require("./logger");
 
 async function migrateTables() {
   await UserModel.sync({ force: true });
-  await ParentModel.sync({ force: true });
-  await OfficerModel.sync({ force: true });
   await ChildrenModel.sync({ force: true });
   await GrowthModel.sync({ force: true });
   await EventModel.sync({ force: true });
@@ -33,8 +31,6 @@ async function migrateTables() {
 
 async function seedData() {
   await UserSeeder();
-  await ParentSeeder();
-  await OfficerSeeder();
   await ChildrenSeeder();
   await GrowthSeeder();
   await EventSeeder();

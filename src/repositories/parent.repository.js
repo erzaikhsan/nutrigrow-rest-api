@@ -1,19 +1,19 @@
-const { ParentModel, UserModel } = require("../models");
+const { UserModel } = require("../models");
 const { Op } = require("sequelize");
 
-async function registerAccount(params) {
-  const { id, email, password, role, is_active } = params;
+// async function registerAccount(params) {
+//   const { id, email, password, role, is_active } = params;
 
-  const addAccount = await UserModel.create({
-    id,
-    email,
-    password,
-    role,
-    is_active,
-  });
+//   const addAccount = await UserModel.create({
+//     id,
+//     email,
+//     password,
+//     role,
+//     is_active,
+//   });
 
-  return addAccount;
-}
+//   return addAccount;
+// }
 
 async function registerParent(params) {
   const {
@@ -27,40 +27,46 @@ async function registerParent(params) {
     phone_number,
     address,
     region,
+    active_period,
   } = params;
 
-  await UserModel.update(
-    {
-      id,
-      email,
-      password,
-      role,
-      is_active: true,
-    },
-    {
-      where: {
-        id: id,
-      },
-    }
-  );
+  // await UserModel.update(
+  //   {
+  //     id,
+  //     email,
+  //     password,
+  //     role,
+  //     is_active: true,
+  //   },
+  //   {
+  //     where: {
+  //       id: id,
+  //     },
+  //   }
+  // );
 
-  const addParent = await ParentModel.create({
-    user_id: id,
+  const addParent = await UserModel.create({
+    id,
+    email,
+    password,
+    role,
+    is_active: true,
     full_name,
     gender,
     date_of_birth,
     phone_number,
     address,
     region,
+    active_period,
   });
 
   return addParent;
 }
 
 async function getParents() {
-  return ParentModel.findAll({
+  return UserModel.findAll({
     attributes: [
-      "user_id",
+      "id",
       "full_name",
       "gender",
       "date_of_birth",
@@ -69,49 +75,49 @@ async function getParents() {
       "region",
     ],
     order: [["full_name", "ASC"]],
+    where: {
+      role: "Parent",
+    },
   });
 }
 
 async function getParentAccount(id) {
-  const profile = await ParentModel.findByPk(id, {
+  const profile = await UserModel.findByPk(id, {
     attributes: [
-      "user_id",
+      "id",
+      "is_active",
       "full_name",
       "gender",
       "date_of_birth",
       "phone_number",
       "address",
       "region",
+      "active_period",
     ],
   });
-  const dataIsActive = await UserModel.findByPk(id, {
-    attributes: ["is_active"],
-  });
 
-  return {
-    ...profile.dataValues,
-    is_active: dataIsActive.is_active,
-  };
+  return profile;
 }
 
 async function getParentById(id) {
-  return ParentModel.findByPk(id, {
+  return UserModel.findByPk(id, {
     attributes: [
-      "user_id",
+      "id",
       "full_name",
       "gender",
       "date_of_birth",
       "phone_number",
       "address",
       "region",
+      "active_period",
     ],
   });
 }
 
 async function getParentByName(name) {
-  return ParentModel.findAll({
+  return UserModel.findAll({
     attributes: [
-      "user_id",
+      "id",
       "full_name",
       "gender",
       "date_of_birth",
@@ -123,14 +129,36 @@ async function getParentByName(name) {
       full_name: {
         [Op.iLike]: `%${name}%`,
       },
+      role: "Parent",
+    },
+  });
+}
+
+async function getParentByNameAndRegion(name, region) {
+  return UserModel.findAll({
+    attributes: [
+      "id",
+      "full_name",
+      "gender",
+      "date_of_birth",
+      "phone_number",
+      "address",
+      "region",
+    ],
+    where: {
+      full_name: {
+        [Op.iLike]: `%${name}%`,
+      },
+      role: "Parent",
+      region: region,
     },
   });
 }
 
 async function getParentsByRegion(region) {
-  return ParentModel.findAll({
+  return UserModel.findAll({
     attributes: [
-      "user_id",
+      "id",
       "full_name",
       "gender",
       "date_of_birth",
@@ -141,15 +169,23 @@ async function getParentsByRegion(region) {
     order: [["full_name", "ASC"]],
     where: {
       region,
+      role: "Parent",
     },
   });
 }
 
 async function updateParent(id, data) {
-  const { full_name, gender, date_of_birth, phone_number, address, region } =
-    data;
+  const {
+    full_name,
+    gender,
+    date_of_birth,
+    phone_number,
+    address,
+    region,
+    active_period,
+  } = data;
 
-  const [rowsUpdated, updatedData] = await ParentModel.update(
+  const [rowsUpdated, updatedData] = await UserModel.update(
     {
       full_name,
       gender,
@@ -157,10 +193,11 @@ async function updateParent(id, data) {
       phone_number,
       address,
       region,
+      active_period,
     },
     {
       where: {
-        user_id: id,
+        id: id,
       },
       returning: true,
     }
@@ -170,9 +207,9 @@ async function updateParent(id, data) {
 }
 
 async function deleteParent(id) {
-  await ParentModel.destroy({
+  await UserModel.destroy({
     where: {
-      user_id: id,
+      id: id,
     },
   });
 
@@ -185,11 +222,12 @@ async function deleteParent(id) {
 
 module.exports = {
   registerParent,
-  registerAccount,
+  // registerAccount,
   getParents,
   getParentAccount,
   getParentById,
   getParentByName,
+  getParentByNameAndRegion,
   getParentsByRegion,
   updateParent,
   deleteParent,

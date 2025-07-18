@@ -3,7 +3,7 @@ const { db } = require("../config");
 const Children = require("./children.model");
 
 const Vaccine = db.define(
-  "vaccine",
+  "vaccines",
   {
     id: {
       type: DataTypes.STRING,
@@ -25,9 +25,13 @@ const Vaccine = db.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    place: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
   },
   {
-    tableName: "vaccine",
+    tableName: "vaccines",
     freezeTableName: true,
     timestamps: true,
   }

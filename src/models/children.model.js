@@ -1,6 +1,7 @@
 const { DataTypes } = require("sequelize");
 const { db } = require("../config");
-const Parent = require("./parent.model");
+const User = require("./user.model");
+// const Parent = require("./parent.model");
 
 const Children = db.define(
   "children",
@@ -13,8 +14,8 @@ const Children = db.define(
     parents_id: {
       type: DataTypes.STRING,
       references: {
-        model: Parent,
-        key: "user_id",
+        model: User,
+        key: "id",
       },
     },
     full_name: {
@@ -35,10 +36,14 @@ const Children = db.define(
     },
     father: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
     },
     mother: {
       type: DataTypes.STRING,
+      allowNull: false,
+    },
+    order_of_child: {
+      type: DataTypes.INTEGER,
       allowNull: false,
     },
     region: {
@@ -89,6 +94,6 @@ const Children = db.define(
   }
 );
 
-Children.belongsTo(Parent, { foreignKey: "parents_id" });
+Children.belongsTo(User, { foreignKey: "parents_id" });
 
 module.exports = Children;

@@ -11,7 +11,7 @@ const Otp = db.define(
       unique: true,
     },
     otp: {
-      type: DataTypes.STRING(4),
+      type: DataTypes.INTEGER,
       allowNull: false,
     },
     expires_at: {

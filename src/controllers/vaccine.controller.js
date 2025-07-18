@@ -63,12 +63,13 @@ async function getVaccineByChildId(req, res) {
 async function updateVaccine(req, res) {
   try {
     const id = req.params.id;
-    const { children_id, date, vaccine_name } = req.body;
+    const { children_id, date, vaccine_name, place } = req.body;
     const result = await VaccineService.updateVaccine({
       id,
       children_id,
       date,
       vaccine_name,
+      place,
     });
     res.status(200).json({
       success: true,

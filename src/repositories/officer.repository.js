@@ -1,4 +1,4 @@
-const { OfficerModel, UserModel } = require("../models");
+const { UserModel } = require("../models");
 const { Op } = require("sequelize");
 
 async function registerOfficer(params) {
@@ -14,33 +14,39 @@ async function registerOfficer(params) {
     phone_number,
     address,
     region,
+    active_period,
   } = params;
 
-  await UserModel.create({
+  // await UserModel.create({
+  //   id,
+  //   email,
+  //   password,
+  //   role,
+  //   is_active,
+  // });
+
+  const addOfficer = await UserModel.create({
     id,
     email,
     password,
     role,
     is_active,
-  });
-
-  const addOfficer = await OfficerModel.create({
-    user_id: id,
     full_name,
     gender,
     date_of_birth,
     phone_number,
     address,
     region,
+    active_period,
   });
 
   return addOfficer;
 }
 
 async function getOfficers(uid) {
-  return OfficerModel.findAll({
+  return UserModel.findAll({
     attributes: [
-      "user_id",
+      "id",
       "full_name",
       "gender",
       "date_of_birth",
@@ -50,21 +56,23 @@ async function getOfficers(uid) {
     ],
     order: [["region", "ASC"]],
     where: {
-      user_id: { [Op.ne]: uid },
+      id: { [Op.ne]: uid },
+      role: "Officer",
     },
   });
 }
 
 async function getOfficerAccount(id) {
-  const profile = await OfficerModel.findByPk(id, {
+  const profile = await UserModel.findByPk(id, {
     attributes: [
-      "user_id",
+      "id",
       "full_name",
       "gender",
       "date_of_birth",
       "phone_number",
       "address",
       "region",
+      "active_period",
     ],
   });
   const dataIsActive = await UserModel.findByPk(id, {
@@ -78,23 +86,24 @@ async function getOfficerAccount(id) {
 }
 
 async function getOfficerById(id) {
-  return OfficerModel.findByPk(id, {
+  return UserModel.findByPk(id, {
     attributes: [
-      "user_id",
+      "id",
       "full_name",
       "gender",
       "date_of_birth",
       "phone_number",
       "address",
       "region",
+      "active_period",
     ],
   });
 }
 
 async function getOfficersByRegion(region) {
-  return OfficerModel.findAll({
+  return UserModel.findAll({
     attributes: [
-      "user_id",
+      "id",
       "full_name",
       "gender",
       "date_of_birth",
@@ -105,15 +114,23 @@ async function getOfficersByRegion(region) {
     order: [["full_name", "ASC"]],
     where: {
       region,
+      role: "Officer",
     },
   });
 }
 
 async function updateOfficer(id, data) {
-  const { full_name, gender, date_of_birth, phone_number, address, region } =
-    data;
+  const {
+    full_name,
+    gender,
+    date_of_birth,
+    phone_number,
+    address,
+    region,
+    active_period,
+  } = data;
 
-  const [rowsUpdated, updatedData] = await OfficerModel.update(
+  const [rowsUpdated, updatedData] = await UserModel.update(
     {
       full_name,
       gender,
@@ -121,10 +138,11 @@ async function updateOfficer(id, data) {
       phone_number,
       address,
       region,
+      active_period,
     },
     {
       where: {
-        user_id: id,
+        id: id,
       },
       returning: true,
     }
@@ -134,9 +152,9 @@ async function updateOfficer(id, data) {
 }
 
 async function deleteOfficer(id) {
-  await OfficerModel.destroy({
+  await UserModel.destroy({
     where: {
-      user_id: id,
+      id: id,
     },
   });
 
