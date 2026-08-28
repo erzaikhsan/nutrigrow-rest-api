@@ -11,11 +11,17 @@ Express 5 · TypeScript · Prisma · PostgreSQL
 ### 1. Prasyarat
 
 ```bash
-sudo pacman -S --needed nodejs npm postgresql
+sudo pacman -S --needed nodejs postgresql
 ```
 
-Periksa versinya — Prisma dan skrip di proyek ini butuh **Node 20.12 ke atas**
-(`process.loadEnvFile` dipakai untuk memuat `.env` tanpa paket tambahan):
+Proyek ini memakai **yarn** (`yarn.lock`), bukan npm. Bila belum ada:
+
+```bash
+sudo pacman -S --needed yarn
+```
+
+Periksa versi Node — minimal **20.12**, karena `process.loadEnvFile()` dipakai
+untuk memuat `.env` tanpa paket tambahan:
 
 ```bash
 node -v
@@ -23,10 +29,10 @@ node -v
 
 ### 2. Menyiapkan PostgreSQL
 
-Kalau PostgreSQL baru dipasang, klaster datanya perlu diinisialisasi lebih dulu:
+Klaster datanya perlu diinisialisasi lebih dulu:
 
 ```bash
-sudo -u postgres initdb -D /var/lib/postgres/data
+sudo -u postgres initdb --locale=en_US.UTF-8 -E UTF8 -D /var/lib/postgres/data
 sudo systemctl enable --now postgresql
 ```
 
@@ -34,10 +40,15 @@ Lalu buat basis data dan penggunanya:
 
 ```bash
 sudo -u postgres psql <<'SQL'
-CREATE USER nutrigrow WITH PASSWORD 'nutrigrow';
+CREATE USER nutrigrow WITH PASSWORD 'nutrigrow' CREATEDB;
 CREATE DATABASE nutrigrow OWNER nutrigrow;
 SQL
 ```
+
+> `CREATEDB` diperlukan hanya bila kelak menjalankan `prisma migrate dev` untuk
+> membuat migrasi baru — perintah itu membuat *shadow database* sementara untuk
+> mendeteksi drift, dan gagal tanpa hak tersebut. Untuk sekadar menjalankan
+> migrasi yang sudah ada (`db:deploy`), hak itu tidak dibutuhkan.
 
 ### 3. Konfigurasi
 
@@ -51,8 +62,14 @@ Buka `.env` dan sesuaikan:
 |---|---|
 | `DATABASE_URL` | `postgresql://nutrigrow:nutrigrow@localhost:5432/nutrigrow?schema=public` |
 | `JWT_SECRET` | Wajib minimal 32 karakter. Buat dengan `openssl rand -base64 48` |
-| `SMTP_*` | Kredensial pengirim OTP. Untuk uji coba lokal boleh diisi apa saja — pengiriman surel baru dipanggil saat mendaftar |
+| `SMTP_USER` | **Harus berbentuk alamat surel yang sah** — divalidasi `z.string().email()`. Untuk uji lokal, alamat apa pun yang berformat benar sudah cukup |
+| `SMTP_HOST`, `SMTP_PASSWORD` | Wajib terisi, tidak punya nilai bawaan. Untuk uji lokal boleh diisi apa saja |
 | `ACCOUNT_ACTIVE_YEARS` | Masa aktif akun sejak pendaftaran |
+
+Server menolak jalan bila ada variabel yang tidak valid, lengkap dengan
+keterangan variabel mana yang bermasalah. Pengiriman surel baru benar-benar
+dipanggil saat pendaftaran dan lupa kata sandi, jadi nilai SMTP palsu tidak
+mengganggu pemakaian lain.
 
 > **App Password Gmail.** Kredensial SMTP kini hanya berada di `.env`, yang
 > tidak ikut ter-commit. Versi lama menuliskannya langsung di dalam kode
@@ -62,21 +79,29 @@ Buka `.env` dan sesuaikan:
 > Security → App passwords, lalu perbarui `.env` — riwayat git tidak perlu
 > ikut dibersihkan asalkan kredensial lamanya sudah tidak berlaku.
 
-Server menolak jalan bila ada variabel yang tidak valid, lengkap dengan
-keterangan variabel mana yang bermasalah.
-
 ### 4. Pasang, migrasi, semai
 
 ```bash
-npm install
-npm run db:migrate      # membuat tabel dan seluruh indeks
-npm run db:seed         # mengisi data penelitian Desa Jipang
+yarn install
+yarn db:generate        # tipe Prisma Client — wajib sebelum typecheck
+yarn db:deploy          # menerapkan prisma/migrations/0_init
+npx prisma db seed      # mengisi data penelitian Desa Jipang
 ```
+
+> **Jangan memakai `yarn db:seed` di sini.** Skrip itu menjalankan `tsx`
+> langsung, dan **Prisma Client tidak membaca `.env`** — hanya Prisma CLI yang
+> membacanya. Akibatnya `yarn db:seed` berhenti dengan "Environment variable
+> not found: DATABASE_URL" meski `.env` sudah benar. `npx prisma db seed`
+> memuat `.env` lebih dulu lalu memanggil skrip yang sama. Alternatifnya:
+> `DATABASE_URL="..." yarn db:seed`.
+
+> Penyemaian memanggil `clearDatabase()` yang mengosongkan seluruh tabel lebih
+> dulu. Aman di basis data lokal, **tidak pernah** di produksi tanpa disengaja.
 
 ### 5. Jalankan
 
 ```bash
-npm run dev
+yarn dev
 ```
 
 Server siap di `http://localhost:3000/api/v1`. Cek cepat:
@@ -105,6 +130,97 @@ sudo firewall-cmd --add-port=3000/tcp   # tanpa --permanent, hanya sesi ini
 
 ---
 
+## Deploy ke Render + Neon
+
+Aplikasi dijalankan sebagai proses Node biasa di Render (paket free), dengan
+PostgreSQL terkelola di Neon. Berkas `render.yaml` di akar repo sudah memuat
+seluruh konfigurasinya.
+
+Yang wajib ikut ter-commit sebelum deploy pertama: **`yarn.lock`**,
+**`prisma/migrations/`**, `render.yaml`, dan `.node-version`. Tanpa
+`prisma/migrations/`, build akan sukses tetapi database produksi lahir tanpa
+tabel sama sekali.
+
+### 1. Database di Neon
+
+Buat project baru, region Singapore. Salin connection string **direct
+(unpooled)** — bukan yang pooled.
+
+Pooler diperlukan hanya bila ada banyak proses; satu instans server berumur
+panjang tidak membutuhkannya, dan `prisma migrate deploy` justru gagal bila
+dijalankan lewat pgbouncer dalam mode transaksi.
+
+### 2. Layanan di Render
+
+Buat Blueprint baru dan arahkan ke repo ini. Render membaca `render.yaml`
+otomatis. Empat nilai bertanda `sync: false` diisi lewat dashboard:
+
+| Kunci | Isi |
+|---|---|
+| `DATABASE_URL` | Connection string direct dari Neon |
+| `JWT_SECRET` | Buat baru: `openssl rand -base64 48`. Jangan pakai nilai yang sama dengan lokal |
+| `SMTP_USER` | Alamat Gmail pengirim OTP |
+| `SMTP_PASSWORD` | App password Google 16 karakter |
+
+`PORT` **jangan diisi** — Render menyuntikkannya sendiri dan `src/config/env.ts`
+sudah membacanya. `CORS_ORIGINS` dibiarkan kosong: Retrofit adalah klien HTTP
+native, tidak mengirim header `Origin`, jadi CORS tidak berlaku baginya.
+
+Build command menjalankan `yarn db:deploy` (`prisma migrate deploy`). Perintah
+itu idempoten — hanya menerapkan migrasi yang belum pernah jalan — jadi aman
+diulang setiap deploy.
+
+### 3. Semai data produksi
+
+Dijalankan **manual dari laptop**, sekali saja, setelah deploy pertama berhasil:
+
+```bash
+DATABASE_URL="<connection-string-neon>" yarn db:seed
+```
+
+> `db:seed` memanggil `clearDatabase()` yang mengosongkan seluruh tabel lebih
+> dulu. Itu tepat untuk database yang baru lahir dan berbahaya setelahnya.
+> Inilah alasan penyemaian tidak pernah diletakkan di build command.
+
+### 4. Menahan instans agar tidak tidur
+
+Instans free Render tidur setelah ~15 menit tanpa permintaan, dan permintaan
+berikutnya menunggu 30–60 detik sampai bangun.
+
+Daftarkan job di cron-job.org atau UptimeRobot: `GET https://<host>/health`
+setiap 10 menit. Endpoint itu sudah dikecualikan dari log akses, jadi ping tidak
+mengotori log.
+
+Ping 24/7 selama sebulan memakai sekitar 730 dari 750 jam kuota bulanan.
+Marginnya tipis dan kuota itu dibagi dengan layanan free lain di akun yang sama,
+jadi **nyalakan ping menjelang sidang dan matikan setelahnya.**
+
+### 5. Verifikasi
+
+```bash
+curl https://<host>/health
+```
+
+Harus mengembalikan `{"success":true,"message":"NutriGrow API aktif","data":null}`.
+
+Lalu, lewat URL produksi:
+
+1. Login sebagai Admin, Kader, dan Orang tua.
+2. Ambil satu daftar penimbangan dan pastikan tanggalnya berformat
+   `"2023-07-28 00:00:00.000 Z"` — bukan ISO 8601. Aplikasi Android menguraikan
+   format ini dengan pola ketat; bila berubah, tiga layar berhenti bekerja.
+3. Panggil satu endpoint daftar anak **tanpa** token dan pastikan ditolak 401.
+   Database produksi memuat nama balita dan orang tua yang sebenarnya.
+4. Uji `registerOfficer` memakai token Admin.
+
+### 6. Menghubungkan aplikasi Android ke produksi
+
+Ubah `baseUrl` di `ApiConfig.kt` menjadi `https://<host>/api/v1/`. Karena
+HTTPS, aplikasi tidak memerlukan `usesCleartextTraffic` maupun network security
+config — berbeda dengan menunjuk ke IP laptop di WiFi lokal.
+
+---
+
 ## Akun hasil penyemaian
 
 Seluruh akun memakai kata sandi **`password123`**.
@@ -122,15 +238,17 @@ Seluruh akun memakai kata sandi **`password123`**.
 
 | Perintah | Kegunaan |
 |---|---|
-| `npm run dev` | Server pengembangan dengan muat ulang otomatis |
-| `npm run build` | Kompilasi TypeScript ke `dist/` |
-| `npm start` | Menjalankan hasil kompilasi |
-| `npm run typecheck` | Pemeriksaan tipe tanpa menghasilkan berkas |
-| `npm run db:migrate` | Membuat dan menerapkan migrasi |
-| `npm run db:reset` | Mengosongkan lalu memigrasi dan menyemai ulang |
-| `npm run db:seed` | Menyemai ulang data |
-| `npm run db:studio` | Penjelajah basis data berbasis web |
-| `npm run who:import-hcfa` | Mengimpor tabel WHO lingkar kepala |
+| `yarn dev` | Server pengembangan dengan muat ulang otomatis |
+| `yarn build` | Kompilasi TypeScript ke `dist/` |
+| `yarn start` | Menjalankan hasil kompilasi |
+| `yarn typecheck` | Pemeriksaan tipe tanpa menghasilkan berkas |
+| `yarn db:generate` | Membuat tipe Prisma Client |
+| `yarn db:migrate` | Membuat migrasi baru (butuh hak `CREATEDB`) |
+| `yarn db:deploy` | Menerapkan migrasi yang sudah ada |
+| `yarn db:reset` | Mengosongkan lalu memigrasi dan menyemai ulang |
+| `npx prisma db seed` | Menyemai ulang data — **bukan** `yarn db:seed`, lihat bagian 4 |
+| `yarn db:studio` | Penjelajah basis data berbasis web |
+| `node scripts/import-who-hcfa.ts` | Mengimpor tabel WHO lingkar kepala |
 
 ---
 
@@ -164,17 +282,41 @@ seluruh aturan gizi bisa diuji tanpa menyalakan server.
 
 ## Tabel WHO lingkar kepala
 
-Lingkar kepala dinilai hanya setelah tabel rujukan WHO diimpor. Unduh berkas
-*head circumference-for-age, expanded tables* (format txt) untuk anak laki-laki
-dan perempuan dari situs WHO Child Growth Standards, lalu:
+`src/domain/hcfa-reference.ts` **sudah terisi**: 61 baris (umur 0–60 bulan)
+untuk masing-masing jenis kelamin, diambil dari WHO Child Growth Standards.
 
-```bash
-npm run who:import-hcfa -- hcfa-boys.txt hcfa-girls.txt
+Sumbernya, bila perlu diambil ulang:
+
+```
+https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/
+  indicators/head-circumference-for-age/hcfa-boys-0-5-zscores.xlsx
+  indicators/head-circumference-for-age/hcfa-girls-0-5-zscores.xlsx
 ```
 
-Sebelum diimpor, lingkar kepala tetap dicatat dan statusnya `Unknown`. Angkanya
-sengaja tidak ditulis tangan agar tidak ada nilai rujukan yang tidak
-terverifikasi masuk ke dalam analisis.
+Dua jebakan pada langkah ini:
+
+- **Alamat `.txt` lama di `who.int/childgrowth/…` sudah 404.** WHO kini hanya
+  menyajikan `.xlsx`, jadi berkasnya perlu dikonversi ke teks berpemisah tab
+  sebelum diumpankan ke skrip impor.
+- **Jangan memakai berkas *expanded tables*.** Berkas itu disusun **per hari**
+  (kolom `Day`, 1.857 baris) dan tidak punya kolom `Month`; skrip impor akan
+  berhenti dengan "Kolom umur tidak ditemukan". Yang dipakai adalah tabel
+  `0-5-zscores` yang berkolom `Month, L, M, S, SD, SD3neg … SD3`.
+
+Setelah dikonversi jadi TSV:
+
+```bash
+node scripts/import-who-hcfa.ts hcfa-boys.txt hcfa-girls.txt
+```
+
+Skripnya menerima pemisah tab, spasi ganda, maupun spasi tunggal, dan mengenali
+nama kolom `Month`/`Age`, `SD0`/`M`/`Median`, `SD1`–`SD3`, serta
+`SD1neg`–`SD3neg`.
+
+Angka rujukannya sengaja tidak pernah ditulis tangan, agar tidak ada nilai yang
+tidak terverifikasi masuk ke dalam analisis. Bila berkas rujukan dikosongkan
+lagi, lingkar kepala tetap dicatat tetapi statusnya menjadi `Unknown` dan
+z-score-nya `null` — bukan galat.
 
 `src/domain/hcfa-reference.ts` adalah **berkas hasil generate** — jangan
 disunting manual, karena akan tertimpa saat perintah di atas dijalankan lagi.
