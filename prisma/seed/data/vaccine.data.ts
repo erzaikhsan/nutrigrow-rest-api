@@ -1,6 +1,6 @@
 /**
  * Data imunisasi, disalin apa adanya dari
- * legacy/src/seeders/vaccine.seeder.js.
+ * main:src/seeders/vaccine.seeder.js.
  */
 
 import { randomUUID } from "node:crypto";

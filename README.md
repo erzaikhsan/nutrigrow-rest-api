@@ -54,6 +54,14 @@ Buka `.env` dan sesuaikan:
 | `SMTP_*` | Kredensial pengirim OTP. Untuk uji coba lokal boleh diisi apa saja — pengiriman surel baru dipanggil saat mendaftar |
 | `ACCOUNT_ACTIVE_YEARS` | Masa aktif akun sejak pendaftaran |
 
+> **App Password Gmail.** Kredensial SMTP kini hanya berada di `.env`, yang
+> tidak ikut ter-commit. Versi lama menuliskannya langsung di dalam kode
+> sumber, sehingga nilainya masih terekam pada riwayat git di branch `main`
+> (commit `87fd2b5`). Kalau sewaktu-waktu repo dibuka ke publik atau app
+> password itu dicurigai bocor, cabut dan ganti lewat Google Account →
+> Security → App passwords, lalu perbarui `.env` — riwayat git tidak perlu
+> ikut dibersihkan asalkan kredensial lamanya sudah tidak berlaku.
+
 Server menolak jalan bila ada variabel yang tidak valid, lengkap dengan
 keterangan variabel mana yang bermasalah.
 
@@ -138,7 +146,14 @@ src/
   domain/              Aturan gizi: standar WHO, z-score, LiLA, KMS
   middlewares/         Autentikasi, pembatas peran, penangan galat
   modules/             Satu folder per fitur: route, controller, service, skema
-legacy/                Implementasi lama, disimpan sebagai rujukan
+scripts/               Perkakas sekali jalan, mis. impor tabel WHO
+```
+
+Implementasi lama berbasis Sequelize tidak lagi ikut di branch ini. Riwayatnya
+tetap utuh di branch `main` bila sewaktu-waktu perlu dirujuk:
+
+```bash
+git show main:src/services/report.service.js
 ```
 
 Ketergantungan mengalir satu arah: `modules` memakai `domain` dan `core`,
@@ -163,15 +178,25 @@ terverifikasi masuk ke dalam analisis.
 
 ---
 
-## Catatan untuk data penelitian
+## Koreksi pada data semai
 
-Dua hal yang perlu diperiksa pada data semai (keduanya berasal dari data lama
-dan sengaja tidak diubah diam-diam):
+Dua ketidakcocokan pada data lama sudah diperbaiki. Keduanya dicatat di sini
+dan pada komentar berkas datanya agar tetap dapat ditelusuri.
 
-1. **`birth_head_circum` bernilai 10 untuk seluruh balita.** Lingkar kepala bayi
-   baru lahir normalnya sekitar 34–35 cm, dan baris penimbangan saat lahir pada
-   data yang sama mencatat 34,5. Nilai 10 tampaknya lingkar lengan yang tersalin
-   ke kolom lingkar kepala.
+**1. Ukuran saat lahir berselisih antar tabel.** Data balita dan baris
+penimbangan kelahiran mencatat angka berbeda untuk peristiwa yang sama:
 
-2. **Kegiatan "Posyandu Balita Pamuji 5" berwilayah `RW4`**, sementara empat
-   posyandu lain berpasangan dengan RW-nya masing-masing.
+| Kolom | Sebelum | Sesudah |
+|---|---|---|
+| Berat lahir | 3,2 kg | 3,4 kg |
+| Tinggi lahir | 50 cm | 50,2 cm |
+| Lingkar kepala lahir | 10 cm | 34,5 cm |
+
+Nilai lama seragam untuk seluruh balita, jadi bukan hasil pengukuran per anak
+melainkan nilai bawaan saat pengembangan. Angka 10 pada kolom lingkar kepala
+berasal dari lingkar lengan (10,5 cm) — lingkar kepala bayi baru lahir tidak
+mungkin 10 cm. Ketiganya kini mengikuti baris penimbangan kelahiran, yang
+menjadi titik awal grafik pertumbuhan.
+
+**2. Wilayah Posyandu Pamuji 5** semula `RW4`, kini `RW5`, sesuai empat
+posyandu lainnya dan wilayah kadernya.

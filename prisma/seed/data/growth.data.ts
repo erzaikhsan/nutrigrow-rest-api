@@ -1,6 +1,6 @@
 /**
  * Data penimbangan hasil penelitian di Desa Jipang, disalin apa adanya dari
- * legacy/src/seeders/growth.seeder.js -- termasuk deret bulanan yang dibangun
+ * main:src/seeders/growth.seeder.js -- termasuk deret bulanan yang dibangun
  * lewat perulangan.
  *
  * Kolom wilayah tidak lagi disimpan pada penimbangan (diturunkan dari balita),
