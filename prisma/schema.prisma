@@ -1,0 +1,400 @@
+// NutriGrow - skema basis data
+//
+// Catatan kontrak: nama kolom sengaja dipertahankan snake_case agar identik
+// dengan basis data lama, sementara nama field Prisma memakai camelCase.
+// Konversi ke JSON snake_case yang diharapkan aplikasi Android dilakukan
+// di layer serializer (src/core/serialize.ts), bukan di sini.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enum
+//
+// Nilai yang tersimpan di Postgres dipertahankan persis seperti basis data lama
+// (mengandung spasi) lewat @map, supaya data lama tetap bisa dimigrasikan dan
+// keluaran JSON tidak berubah.
+// ---------------------------------------------------------------------------
+
+enum Role {
+  Parent
+  Officer
+  Admin
+
+  @@map("enum_users_role")
+}
+
+enum Region {
+  RW1
+  RW2
+  RW3
+  RW4
+  RW5
+  Village
+
+  @@map("enum_region")
+}
+
+enum Gender {
+  M
+  F
+
+  @@map("enum_gender")
+}
+
+enum WfaStatus {
+  SEVERELY_UNDERWEIGHT @map("Severely Underweight")
+  UNDERWEIGHT          @map("Underweight")
+  NORMAL               @map("Normal")
+  OVERWEIGHT_OBESE     @map("Overweight and Obese")
+  UNKNOWN              @map("Unknown")
+
+  @@map("enum_wfa_status")
+}
+
+enum HfaStatus {
+  SEVERELY_STUNTED @map("Severely Stunted")
+  STUNTED          @map("Stunted")
+  NORMAL           @map("Normal")
+  UNKNOWN          @map("Unknown")
+
+  @@map("enum_hfa_status")
+}
+
+enum WfhStatus {
+  SEVERELY_WASTING @map("Severely Wasting")
+  WASTING          @map("Wasting")
+  NORMAL           @map("Normal")
+  OVERWEIGHT_OBESE @map("Overweight and Obese")
+  UNKNOWN          @map("Unknown")
+
+  @@map("enum_wfh_status")
+}
+
+/// Status gizi akut berdasarkan lingkar lengan atas (LiLA/MUAC), berlaku untuk
+/// umur 6-59 bulan. Sebelumnya lingkar lengan diukur setiap penimbangan tetapi
+/// tidak pernah dinilai.
+enum MuacStatus {
+  SEVERE_ACUTE   @map("Gizi Buruk Akut")
+  MODERATE_ACUTE @map("Gizi Kurang Akut")
+  NORMAL         @map("Normal")
+  NOT_APPLICABLE @map("Tidak Berlaku")
+
+  @@map("enum_muac_status")
+}
+
+/// Lingkar kepala menurut umur.
+enum HcaStatus {
+  MICROCEPHALY @map("Mikrosefali")
+  NORMAL       @map("Normal")
+  MACROCEPHALY @map("Makrosefali")
+  UNKNOWN      @map("Unknown")
+
+  @@map("enum_hca_status")
+}
+
+/// Penilaian kenaikan berat badan pada KMS.
+/// N = naik sesuai KBM, T = tidak naik atau naik kurang dari KBM,
+/// O = bulan lalu tidak ditimbang, B = baru pertama kali ditimbang.
+enum WeightGainStatus {
+  ADEQUATE      @map("N")
+  INADEQUATE    @map("T")
+  NOT_WEIGHED   @map("O")
+  FIRST_WEIGHIN @map("B")
+
+  @@map("enum_weight_gain_status")
+}
+
+/// Keikutsertaan balita sebagai sasaran posyandu. Tanpa ini, balita yang sudah
+/// lewat 60 bulan atau pindah tetap terhitung selamanya dan merusak penyebut
+/// seluruh laporan.
+enum ChildStatus {
+  ACTIVE
+  GRADUATED
+  MOVED_OUT
+  DECEASED
+
+  @@map("enum_child_status")
+}
+
+// ---------------------------------------------------------------------------
+// Pengguna
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique @db.VarChar(120)
+  password     String   @db.VarChar(255)
+  role         Role
+  isActive     Boolean  @default(true) @map("is_active")
+  fullName     String   @map("full_name") @db.VarChar(100)
+  gender       Gender
+  dateOfBirth  DateTime @map("date_of_birth") @db.Date
+  phoneNumber  String   @map("phone_number") @db.VarChar(20)
+  address      String?  @db.Text
+  region       Region
+  activePeriod DateTime @map("active_period") @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  children         Children[]
+  measuredGrowths  Growth[]        @relation("GrowthMeasuredBy")
+  passwordResets   PasswordReset[]
+  auditLogs        AuditLog[]
+
+  // Daftar orang tua/kader selalu difilter per peran dan per wilayah.
+  @@index([role, region])
+  @@index([role, fullName])
+  @@map("users")
+}
+
+// ---------------------------------------------------------------------------
+// Balita
+// ---------------------------------------------------------------------------
+
+model Children {
+  id           String      @id @default(uuid()) @map("children_id") @db.Uuid
+  parentId     String      @map("parents_id") @db.Uuid
+  /// Nomor Induk Kependudukan, bila sudah terbit. Satu-satunya identitas yang
+  /// benar-benar unik; nama dan urutan lahir bisa berulang antar keluarga.
+  nik          String?     @unique @db.VarChar(16)
+  fullName     String      @map("full_name") @db.VarChar(75)
+  gender       Gender
+  placeOfBirth String      @map("place_of_birth") @db.VarChar(100)
+  dateOfBirth  DateTime    @map("date_of_birth") @db.Date
+  /// Keduanya opsional: tidak semua balita diasuh oleh ayah dan ibu kandung.
+  father       String?     @db.VarChar(100)
+  mother       String?     @db.VarChar(100)
+  orderOfChild Int         @map("order_of_child") @db.SmallInt
+  region       Region
+  status       ChildStatus @default(ACTIVE)
+
+  // Fakta kelahiran. Status gizi saat lahir TIDAK disimpan di sini -- dulu
+  // diduplikasi dari baris growth umur 0 dan hanya ikut diperbarui lewat satu
+  // jalur, sehingga bisa menyimpang. Kini selalu diturunkan saat penyajian.
+  birthWeight     Float @map("birth_weight")
+  birthHeight     Float @map("birth_height")
+  birthHeadCircum Float @map("birth_head_circum")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  parent   User      @relation(fields: [parentId], references: [id], onDelete: Restrict)
+  growths  Growth[]
+  vaccines Vaccine[]
+
+  // Satu orang tua tidak boleh punya dua anak dengan urutan kelahiran sama.
+  // Dulu hanya dicek di service, sehingga bocor pada request bersamaan.
+  @@unique([parentId, orderOfChild], map: "children_parent_order_unique")
+  @@index([parentId])
+  @@index([region, status])
+  @@index([region, fullName])
+  @@map("children")
+}
+
+// ---------------------------------------------------------------------------
+// Penimbangan / tumbuh kembang
+//
+// Kolom `region` sengaja DIHAPUS dari tabel ini. Dulu diduplikasi dari tabel
+// children dan tidak ikut diperbarui saat balita pindah RW, sehingga laporan
+// per-wilayah bisa tidak konsisten. Wilayah kini selalu diturunkan lewat relasi.
+// Aplikasi Android tidak pernah membaca field ini, jadi kontrak API tetap aman.
+// ---------------------------------------------------------------------------
+
+model Growth {
+  id         String   @id @default(uuid()) @db.Uuid
+  childId    String   @map("children_id") @db.Uuid
+  date       DateTime @db.Date
+  /// Periode "YYYY-MM" dari tanggal ukur. Disimpan eksplisit supaya aturan
+  /// "satu penimbangan per balita per bulan" bisa dijamin basis data, bukan
+  /// hanya dicek di service seperti dulu -- pengecekan itu bocor bila dua
+  /// permintaan masuk bersamaan.
+  ///
+  /// Dikosongkan saat baris dihapus lunak. Postgres memperlakukan NULL sebagai
+  /// nilai yang selalu berbeda, sehingga baris terhapus tidak lagi menahan
+  /// slot uniknya dan bulan yang sama bisa dicatat ulang.
+  period     String?  @db.Char(7)
+  ageInMonth Int      @map("age") @db.SmallInt
+
+  weight     Float
+  height     Float
+  headCircum Float @map("head_circum")
+  armCircum  Float @map("arm_circum")
+
+  // Nilai z-score disimpan, bukan hanya kategorinya. Kategori bersifat kasar
+  // (lima pita), sedangkan z-score memungkinkan analisis tren: seorang balita
+  // bisa membaik dari -2,9 ke -2,1 dan tetap berlabel "Underweight" sepanjang
+  // tahun. null bila umur atau tinggi di luar jangkauan tabel WHO.
+  wfaZScore        Float? @map("wfa_zscore")
+  hfaZScore        Float? @map("hfa_zscore")
+  wfhZScore        Float? @map("wfh_zscore")
+  headCircumZScore Float? @map("head_circum_zscore")
+
+  wfaStatus        WfaStatus  @map("wfa_status")
+  hfaStatus        HfaStatus  @map("hfa_status")
+  wfhStatus        WfhStatus  @map("wfh_status")
+  muacStatus       MuacStatus @map("muac_status")
+  headCircumStatus HcaStatus  @map("head_circum_status")
+
+  // Penilaian KMS. Dulu dihitung ulang setiap kali laporan dibuat lalu dibuang;
+  // dengan disimpan, kondisi 2T (dua kali berturut-turut tidak naik) bisa
+  // terdeteksi saat pencatatan, bukan sebulan kemudian.
+  weightGain        Float?           @map("weight_gain")
+  gainStatus        WeightGainStatus @map("gain_status")
+  consecutiveNoGain Int              @default(0) @map("consecutive_no_gain") @db.SmallInt
+
+  /// Ditandai bila nilai berada di luar batas wajar (mengikuti praktik WHO
+  /// Anthro: |z| > 6). Data tidak ditolak, hanya diminta diverifikasi -- salah
+  /// ketik 35 kg untuk bayi merusak seluruh grafik anak itu.
+  isFlagged  Boolean @default(false) @map("is_flagged")
+  flagReason String? @map("flag_reason") @db.VarChar(255)
+
+  note String? @db.VarChar(255)
+
+  /// Kader yang melakukan pengukuran. Data kesehatan tanpa jejak pencatat
+  /// sulit dipertanggungjawabkan.
+  measuredById String? @map("measured_by") @db.Uuid
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  child      Children @relation(fields: [childId], references: [id], onDelete: Cascade)
+  measuredBy User?    @relation("GrowthMeasuredBy", fields: [measuredById], references: [id], onDelete: SetNull)
+
+  @@unique([childId, period], map: "growth_child_period_unique")
+  // Index utama: hampir setiap query menyaring per balita lalu mengurutkan
+  // atau membatasi rentang tanggal.
+  @@index([childId, date(sort: Desc)])
+  // Laporan bulanan menyapu seluruh penimbangan dalam satu rentang tanggal.
+  @@index([date])
+  @@index([period])
+  @@map("growth")
+}
+
+// ---------------------------------------------------------------------------
+// Imunisasi
+// ---------------------------------------------------------------------------
+
+model Vaccine {
+  id          String   @id @default(uuid()) @db.Uuid
+  childId     String   @map("children_id") @db.Uuid
+  date        DateTime @db.Date
+  vaccineName String   @map("vaccine_name") @db.VarChar(100)
+  place       String   @db.VarChar(100)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  child Children @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@index([childId, date(sort: Desc)])
+  @@map("vaccines")
+}
+
+// ---------------------------------------------------------------------------
+// Kegiatan posyandu
+// ---------------------------------------------------------------------------
+
+model Event {
+  id          String   @id @default(uuid()) @db.Uuid
+  title       String   @db.VarChar(150)
+  date        DateTime @db.Date
+  startTime   String   @map("start_time") @db.VarChar(5)
+  endTime     String   @map("end_time") @db.VarChar(5)
+  place       String   @db.VarChar(150)
+  description String   @db.Text
+  region      Region
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  // Layar beranda menanyakan "kegiatan mendatang di wilayah X".
+  @@index([region, date])
+  @@index([date])
+  @@map("events")
+}
+
+// ---------------------------------------------------------------------------
+// OTP pendaftaran
+//
+// Perbaikan dari versi lama: kode disimpan ter-hash sebagai string (dulu
+// INTEGER polos, sehingga OTP berawalan nol rusak), ditambah pembatas percobaan
+// dan penanda sudah-terpakai supaya satu kode tidak bisa dipakai berulang.
+// ---------------------------------------------------------------------------
+
+model OtpRequest {
+  id         String    @id @default(uuid()) @db.Uuid
+  email      String    @db.VarChar(120)
+  codeHash   String    @map("code_hash") @db.VarChar(255)
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(3)
+  attempts   Int       @default(0) @db.SmallInt
+  consumedAt DateTime? @map("consumed_at") @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([email, createdAt(sort: Desc)])
+  @@index([expiresAt])
+  @@map("otp_requests")
+}
+
+/// Token pemulihan kata sandi. Versi lama tidak punya jalur ini sama sekali,
+/// sehingga pengguna yang lupa kata sandi hanya bisa dibantu lewat basis data.
+model PasswordReset {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @map("token_hash") @db.VarChar(255)
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(3)
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([expiresAt])
+  @@map("password_resets")
+}
+
+// ---------------------------------------------------------------------------
+// Jejak audit
+//
+// Data kesehatan anak yang bisa diubah dan dihapus tanpa jejak tidak bisa
+// dipertanggungjawabkan. Perubahan dicatat beserta nilai sebelum dan sesudah.
+// ---------------------------------------------------------------------------
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  RESTORE
+
+  @@map("enum_audit_action")
+}
+
+model AuditLog {
+  id       String      @id @default(uuid()) @db.Uuid
+  actorId  String?     @map("actor_id") @db.Uuid
+  action   AuditAction
+  entity   String      @db.VarChar(40)
+  entityId String      @map("entity_id") @db.VarChar(64)
+  before   Json?
+  after    Json?
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entity, entityId, createdAt(sort: Desc)])
+  @@index([actorId, createdAt(sort: Desc)])
+  @@map("audit_logs")
+}
