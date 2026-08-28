@@ -1,10 +1,5 @@
 import { z } from "zod";
 
-/**
- * Bulan dikirim aplikasi dalam basis satu (1 = Januari) dan dikonversi ke
- * basis nol di sini, satu kali. Versi lama melakukan konversi itu di beberapa
- * tempat dan salah satu di antaranya mengurangi dua kali.
- */
 export const reportPeriodSchema = z.object({
   month: z.coerce
     .number()

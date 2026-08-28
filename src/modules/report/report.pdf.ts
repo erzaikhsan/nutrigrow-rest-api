@@ -1,12 +1,5 @@
 import PDFDocument from "pdfkit-table";
 
-/**
- * Perkakas bersama untuk seluruh laporan PDF.
- *
- * Versi lama memakai paket stream-buffers untuk menampung keluaran. Node sudah
- * menyediakan semua yang diperlukan, jadi satu ketergantungan bisa dilepas.
- */
-
 export const MONTH_NAMES = [
   "Januari",
   "Februari",
@@ -39,10 +32,6 @@ export function createPortraitDocument(): PDFDocument {
   return new PDFDocument({ margin: 30, size: "A4" });
 }
 
-/**
- * Menutup dokumen dan mengumpulkan seluruh isinya menjadi satu Buffer.
- * Pemanggil wajib sudah menuliskan seluruh isi sebelum memanggil ini.
- */
 export function renderToBuffer(doc: PDFDocument): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
@@ -55,7 +44,6 @@ export function renderToBuffer(doc: PDFDocument): Promise<Buffer> {
   });
 }
 
-/** Tanggal dalam bahasa Indonesia, misalnya "28 Juli 2023". */
 export function formatDateId(date: Date): string {
   const day = date.getUTCDate();
   const month = MONTH_NAMES[date.getUTCMonth()] ?? "";

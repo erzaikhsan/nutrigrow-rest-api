@@ -1,8 +1,3 @@
-/**
- * Data imunisasi, disalin apa adanya dari
- * main:src/seeders/vaccine.seeder.js.
- */
-
 import { randomUUID } from "node:crypto";
 
 export interface SeedVaccine {
@@ -25,10 +20,6 @@ const createVaccine = (
 ): void => {
   vaccines.push({ legacyChildId, date, vaccineName, place });
 };
-
-// ---------------------------------------------------------------------------
-// Disalin dari seeder lama mulai dari sini.
-// ---------------------------------------------------------------------------
 
 const balitaPerempuan = [
   { id: "C1", place: "Puskesmas Jipang" },
@@ -225,4 +216,3 @@ balitaLaki.forEach((child) => {
     child.place
   );
 });
-

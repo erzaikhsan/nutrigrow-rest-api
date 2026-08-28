@@ -1,14 +1,3 @@
-/**
- * Data penimbangan hasil penelitian di Desa Jipang, disalin apa adanya dari
- * main:src/seeders/growth.seeder.js -- termasuk deret bulanan yang dibangun
- * lewat perulangan.
- *
- * Kolom wilayah tidak lagi disimpan pada penimbangan (diturunkan dari balita),
- * dan status gizi dihitung ulang saat penyemaian. Karena itu argumen-argumen
- * tersebut diterima lalu diabaikan, semata-mata agar bentuk pemanggilan asli
- * bisa dipertahankan utuh.
- */
-
 import { randomUUID } from "node:crypto";
 
 export interface SeedGrowth {
@@ -25,10 +14,6 @@ export const growths: SeedGrowth[] = [];
 
 const uuidv4 = (): string => randomUUID();
 
-// Blok data asli memanggil ketiga fungsi ini untuk mengisi kolom status.
-// Hasilnya diabaikan -- status kini dihitung ulang oleh pipeline penilaian saat
-// penyemaian -- tetapi tanda tangannya dibuat variadik agar bentuk pemanggilan
-// pada data asli tidak perlu disentuh sama sekali.
 const calculateWFA = (..._args: unknown[]): string => "";
 const calculateHFA = (..._args: unknown[]): string => "";
 const calculateWFH = (..._args: unknown[]): string => "";
@@ -59,11 +44,6 @@ const createGrowth = (
   });
 };
 
-// ---------------------------------------------------------------------------
-// Disalin dari seeder lama mulai dari sini.
-// ---------------------------------------------------------------------------
-
-//C1
 createGrowth(
   "G0",
   "C1",
@@ -80,7 +60,6 @@ createGrowth(
   "Pengukuran Saat Lahir"
 );
 
-//C2
 createGrowth(
   "G1",
   "C2",
@@ -97,7 +76,6 @@ createGrowth(
   "Pengukuran Saat Lahir"
 );
 
-//C3
 createGrowth(
   "G2",
   "C3",
@@ -114,7 +92,6 @@ createGrowth(
   "Pengukuran Saat Lahir"
 );
 
-//C4
 createGrowth(
   "G3",
   "C4",
@@ -131,7 +108,6 @@ createGrowth(
   "Pengukuran Saat Lahir"
 );
 
-//C5
 createGrowth(
   "G4",
   "C5",
@@ -148,7 +124,6 @@ createGrowth(
   "Pengukuran Saat Lahir"
 );
 
-//C6
 createGrowth(
   "G5",
   "C6",
@@ -165,7 +140,6 @@ createGrowth(
   "Pengukuran Saat Lahir"
 );
 
-//C7
 createGrowth(
   "G6",
   "C7",
@@ -182,7 +156,6 @@ createGrowth(
   "Pengukuran Saat Lahir"
 );
 
-//C8
 createGrowth(
   "G7",
   "C8",
@@ -199,7 +172,6 @@ createGrowth(
   "Pengukuran Saat Lahir"
 );
 
-//C9
 createGrowth(
   "G8",
   "C9",
@@ -216,7 +188,6 @@ createGrowth(
   "Pengukuran Saat Lahir"
 );
 
-//Perempuan
 const balitaPerempuan = [
   { id: "C1", region: "RW1" },
   { id: "C5", region: "RW1" },
@@ -308,10 +279,8 @@ dataPerempuan2025.forEach((entry, index) => {
     entry.note
   );
 });
-
 })
 
-//Laki-laki
 const balitaLaki = [
   { id: "C2", region: "RW1" },
   { id: "C3", region: "RW1" },
@@ -438,6 +407,4 @@ dataLaki2025.forEach((entry, index) => {
     entry.note
   );
 });
-
 })
-

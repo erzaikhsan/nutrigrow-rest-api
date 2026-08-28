@@ -1,18 +1,3 @@
-/**
- * Lapisan serialisasi — penjaga kontrak API.
- *
- * Basis data kini memakai tipe tanggal dan enum yang benar, tetapi aplikasi
- * Android yang sudah beredar mengurai tanggal dengan pola KETAT:
- *
- *   DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS XXX")
- *   ZonedDateTime.parse(input, formatter)
- *
- * Format ISO bawaan JSON ("2023-07-28T00:00:00.000Z") akan langsung melempar
- * DateTimeParseException di layar Event, ChildProfile, dan DetailArticle.
- * Karena itu setiap tanggal dikembalikan ke format lama di sini, dan HANYA
- * di sini. Sisa aplikasi bebas bekerja dengan objek Date yang sebenarnya.
- */
-
 import type {
   Children,
   Event,
@@ -28,18 +13,9 @@ import type {
 } from "@prisma/client";
 import { assessNutrition } from "../domain/growth-standards.js";
 
-// ---------------------------------------------------------------------------
-// Tanggal
-// ---------------------------------------------------------------------------
-
 const pad = (value: number, length = 2): string =>
   String(value).padStart(length, "0");
 
-/**
- * Menghasilkan "2023-07-28 00:00:00.000 Z" — persis format yang dipakai basis
- * data lama dan diharapkan pola parsing aplikasi. Selalu dalam UTC, sehingga
- * bagian offset selalu "Z" (setara pola XXX milik Java untuk offset nol).
- */
 export function toLegacyTimestamp(value: Date): string {
   const year = value.getUTCFullYear();
   const month = pad(value.getUTCMonth() + 1);
@@ -55,18 +31,6 @@ export function toLegacyTimestamp(value: Date): string {
 const LEGACY_DATE_PATTERN =
   /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?)?\s*(Z|[+-]\d{2}:?\d{2})?$/;
 
-/**
- * Mengurai tanggal kiriman aplikasi menjadi Date pada tengah malam UTC.
- *
- * Offset zona waktu pada masukan sengaja DIABAIKAN. Aplikasi mengirim
- * "2023-07-28 00:00:00.000 +07:00" ketika maksudnya "tanggal 28 Juli"; kalau
- * offset dihormati, instan yang tersimpan jatuh ke tanggal 27 di UTC dan
- * seluruh perhitungan umur bergeser satu hari. Aplikasi sendiri melakukan hal
- * yang sama lewat helper `parseToSameDateWIB`.
- *
- * Mengembalikan null bila format tidak dikenali, sehingga pemanggil bisa
- * memutuskan sendiri apakah itu error validasi.
- */
 export function parseLegacyDate(input: string): Date | null {
   const match = LEGACY_DATE_PATTERN.exec(input.trim());
   if (!match) return null;
@@ -79,7 +43,6 @@ export function parseLegacyDate(input: string): Date | null {
 
   const parsed = new Date(Date.UTC(year, month - 1, day));
 
-  // Menolak tanggal yang bergulir, misalnya 31 Februari.
   if (
     parsed.getUTCFullYear() !== year ||
     parsed.getUTCMonth() !== month - 1 ||
@@ -90,13 +53,6 @@ export function parseLegacyDate(input: string): Date | null {
 
   return parsed;
 }
-
-// ---------------------------------------------------------------------------
-// Enum -> label
-//
-// Prisma mengembalikan nama anggota enum (SEVERELY_UNDERWEIGHT), sedangkan
-// aplikasi menampilkan labelnya apa adanya ("Severely Underweight").
-// ---------------------------------------------------------------------------
 
 const WFA_LABEL: Record<WfaStatus, string> = {
   SEVERELY_UNDERWEIGHT: "Severely Underweight",
@@ -135,7 +91,6 @@ const HCA_LABEL: Record<HcaStatus, string> = {
   UNKNOWN: "Unknown",
 };
 
-/** Kode KMS: N naik, T tidak naik, O tidak ditimbang bulan lalu, B baru. */
 const GAIN_LABEL: Record<WeightGainStatus, string> = {
   ADEQUATE: "N",
   INADEQUATE: "T",
@@ -150,14 +105,6 @@ export const muacLabel = (status: MuacStatus): string => MUAC_LABEL[status];
 export const hcaLabel = (status: HcaStatus): string => HCA_LABEL[status];
 export const gainLabel = (status: WeightGainStatus): string =>
   GAIN_LABEL[status];
-
-// ---------------------------------------------------------------------------
-// DTO
-//
-// Model Kotlin di aplikasi mendeklarasikan field sebagai String non-null,
-// sementara Gson akan menyuntikkan null tanpa protes dan meledak belakangan.
-// Kolom opsional karena itu diturunkan menjadi string kosong.
-// ---------------------------------------------------------------------------
 
 const orEmpty = (value: string | null): string => value ?? "";
 
@@ -175,7 +122,6 @@ export interface UserDto {
   role: string;
 }
 
-/** Kolom `password` tidak pernah ikut. Endpoint lama membocorkan hash bcrypt. */
 export function toUserDto(user: User): UserDto {
   return {
     id: user.id,
@@ -213,13 +159,6 @@ export interface ChildDto {
   status: string;
 }
 
-/**
- * Status gizi saat lahir tidak lagi disimpan di tabel `children` -- dulu
- * diduplikasi dari baris penimbangan umur 0 dan bisa menyimpang darinya.
- * Karena aplikasi tetap mengharapkan ketiga field itu ada, nilainya dihitung
- * ulang di sini dari fakta kelahiran. Perhitungannya murni dan tanpa akses
- * basis data, jadi tidak menambah query.
- */
 export function toChildDto(child: Children): ChildDto {
   const atBirth = assessNutrition({
     dateOfBirth: child.dateOfBirth,
@@ -247,8 +186,6 @@ export function toChildDto(child: Children): ChildDto {
     wfh_status: wfhLabel(atBirth.wfhStatus),
     birth_head_circum: child.birthHeadCircum,
 
-    // Field tambahan di bawah diabaikan Gson pada aplikasi yang beredar
-    // sekarang, dan siap dipakai begitu layarnya menyusul.
     nik: child.nik ?? "",
     status: child.status,
   };
@@ -268,8 +205,6 @@ export interface GrowthDto {
   arm_circum: number;
   note: string;
 
-  // Tambahan sejak versi 2. Aplikasi yang beredar sekarang mengabaikannya
-  // karena GrowthModel tidak mendeklarasikan field ini, sehingga aman dikirim.
   wfa_zscore: number | null;
   hfa_zscore: number | null;
   wfh_zscore: number | null;

@@ -34,11 +34,6 @@ const OTP_TTL_MINUTES = 10;
 const OTP_MAX_ATTEMPTS = 5;
 const OTP_MAX_REQUESTS_PER_HOUR = 5;
 
-/**
- * Berapa lama sebuah OTP yang sudah diverifikasi masih boleh dipakai untuk
- * menyelesaikan pendaftaran. Aplikasi memanggil verifikasi dan pendaftaran
- * sebagai dua permintaan terpisah, sehingga perlu jeda yang wajar.
- */
 const REGISTRATION_WINDOW_MINUTES = 30;
 
 const RESET_TTL_MINUTES = 15;
@@ -55,16 +50,11 @@ function generateNumericCode(): string {
   return String(randomInt(0, 1_000_000)).padStart(6, "0");
 }
 
-/** Masa aktif akun sejak pendaftaran. */
 function defaultActivePeriod(): Date {
   const period = new Date();
   period.setFullYear(period.getFullYear() + env.ACCOUNT_ACTIVE_YEARS);
   return period;
 }
-
-// ---------------------------------------------------------------------------
-// Masuk
-// ---------------------------------------------------------------------------
 
 export interface LoginResult {
   id: string;
@@ -76,8 +66,6 @@ export interface LoginResult {
 export async function login(input: LoginInput): Promise<LoginResult> {
   const user = await prisma.user.findUnique({ where: { email: input.email } });
 
-  // Pesan yang sama untuk surel tidak terdaftar maupun kata sandi salah, agar
-  // endpoint ini tidak bisa dipakai memeriksa surel mana yang punya akun.
   if (!user) throw invalidCredentials();
 
   const isPasswordCorrect = await bcrypt.compare(input.password, user.password);
@@ -108,10 +96,6 @@ export async function login(input: LoginInput): Promise<LoginResult> {
     }),
   };
 }
-
-// ---------------------------------------------------------------------------
-// Pendaftaran: permintaan dan verifikasi OTP
-// ---------------------------------------------------------------------------
 
 export interface OtpRequestResult {
   email: string;
@@ -148,10 +132,6 @@ export async function requestOtp(
 
   await sendOtpEmail(input.email, code);
 
-  // Kata sandi dikembalikan apa adanya semata-mata karena alur aplikasi yang
-  // beredar menyimpannya lalu mengirimkannya kembali pada langkah pendaftaran.
-  // Begitu aplikasi diperbarui untuk memakai token registrasi, field ini
-  // sebaiknya dihapus dari respons.
   return { email: input.email, password: input.password };
 }
 
@@ -215,17 +195,6 @@ export async function verifyOtp(
   };
 }
 
-// ---------------------------------------------------------------------------
-// Pendaftaran akun
-// ---------------------------------------------------------------------------
-
-/**
- * Memastikan pendaftaran benar-benar didahului verifikasi OTP.
- *
- * Versi lama tidak pernah memeriksa ini: siapa pun bisa memanggil endpoint
- * pendaftaran secara langsung dan mendapat akun tanpa pernah menerima kode,
- * sehingga seluruh alur OTP hanya bersifat hiasan.
- */
 async function assertOtpVerified(email: string): Promise<void> {
   const verified = await prisma.otpRequest.findFirst({
     where: {
@@ -265,8 +234,7 @@ async function createAccount(
       phoneNumber: input.phone_number,
       address: input.address || null,
       region: input.region,
-      // Dulu kolom ini tidak pernah diisi padahal NOT NULL, sehingga setiap
-      // pendaftaran berakhir dengan galat 500.
+
       activePeriod: defaultActivePeriod(),
     },
   });
@@ -307,18 +275,6 @@ export async function registerOfficer(
   return toUserDto(user);
 }
 
-// ---------------------------------------------------------------------------
-// Aktivasi akun
-// ---------------------------------------------------------------------------
-
-/**
- * Mengaktifkan atau menonaktifkan akun.
- *
- * Versi lama hanya meminta pengguna sudah masuk, sehingga akun mana pun bisa
- * menonaktifkan akun mana pun -- termasuk orang tua menonaktifkan admin.
- * Aturannya kini: admin boleh atas siapa saja, kader hanya atas orang tua di
- * wilayahnya sendiri, dan tidak seorang pun boleh menonaktifkan dirinya.
- */
 export async function setAccountActive(
   userId: string,
   isActive: boolean,
@@ -358,10 +314,6 @@ export async function setAccountActive(
   return toUserDto(updated);
 }
 
-// ---------------------------------------------------------------------------
-// Pemulihan kata sandi
-// ---------------------------------------------------------------------------
-
 export async function forgotPassword(
   input: ForgotPasswordInput,
 ): Promise<void> {
@@ -370,8 +322,6 @@ export async function forgotPassword(
     select: { id: true },
   });
 
-  // Selalu berakhir sukses, terdaftar maupun tidak, agar endpoint ini tidak
-  // bisa dipakai memetakan surel mana yang punya akun.
   if (!user) return;
 
   const recentRequests = await prisma.passwordReset.count({
@@ -420,7 +370,7 @@ export async function resetPassword(input: ResetPasswordInput): Promise<void> {
       where: { id: record.id },
       data: { usedAt: new Date() },
     }),
-    // Seluruh kode pemulihan lain untuk pengguna ini ikut dimatikan.
+
     prisma.passwordReset.updateMany({
       where: { userId: user.id, usedAt: null },
       data: { usedAt: new Date() },

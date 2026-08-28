@@ -8,10 +8,6 @@ import { assertRegionAccess, isVillageWide, regionFilter } from "../access.js";
 import { recordAudit } from "../audit/audit.service.js";
 import type { UpdateProfileInput, UserSearchInput } from "./user.schema.js";
 
-/**
- * Kolom `password` tidak pernah ikut terbaca ke luar. Endpoint lama
- * mengembalikan seluruh baris pengguna, termasuk hash bcrypt-nya.
- */
 async function findUserOrFail(id: string) {
   const user = await prisma.user.findUnique({ where: { id } });
   if (!user) throw notFound("Pengguna");
@@ -26,7 +22,6 @@ function assertCanViewUser(
   if (auth.role === Role.Admin) return;
 
   if (auth.role === Role.Officer) {
-    // Kader melihat orang tua di wilayahnya, dan sesama kader.
     if (target.role === Role.Parent && !isVillageWide(auth)) {
       assertRegionAccess(auth, target.region);
     }
@@ -97,7 +92,7 @@ async function listByRole(
       role,
       ...nameFilter(query.name),
       ...(region ? { region } : {}),
-      // Kader tetap terbatas pada wilayahnya, apa pun yang diminta.
+
       ...(role === Role.Parent ? regionFilter(auth) : {}),
     },
     orderBy: { fullName: "asc" },
@@ -119,14 +114,6 @@ export const listOfficers = (
   region?: Region,
 ): Promise<UserDto[]> => listByRole(Role.Officer, query, auth, region);
 
-/**
- * Penghapusan pengguna.
- *
- * Orang tua yang masih memiliki data balita tidak boleh dihapus begitu saja --
- * relasi di basis data pun menolaknya. Menghapus riwayat pertumbuhan seorang
- * anak hanya karena akun orang tuanya dihapus bukan perilaku yang benar untuk
- * data kesehatan; akun sebaiknya dinonaktifkan.
- */
 export async function deleteUser(
   id: string,
   auth: AuthContext,

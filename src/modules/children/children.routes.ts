@@ -7,8 +7,6 @@ export const childrenRouter: Router = Router();
 
 childrenRouter.use(authenticate);
 
-// Rute spesifik didaftarkan lebih dahulu; bila tidak, "/name" akan tertangkap
-// oleh "/:id" dan dicari sebagai id balita.
 childrenRouter.get("/name", ChildrenController.listChildren);
 
 childrenRouter.get(

@@ -12,7 +12,6 @@ export interface AuthContext {
 }
 
 declare global {
-  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       auth?: AuthContext;
@@ -32,10 +31,6 @@ export function signAccessToken(payload: TokenPayload): string {
   } as jwt.SignOptions);
 }
 
-/**
- * Membaca konteks autentikasi yang sudah dipasang `authenticate`.
- * Dipakai di controller supaya tipenya tidak lagi opsional.
- */
 export function requireAuth(req: Request): AuthContext {
   if (!req.auth) {
     throw unauthenticated("Autentikasi dibutuhkan");
@@ -69,9 +64,6 @@ export async function authenticate(
     throw unauthenticated("Token tidak valid");
   }
 
-  // Peran dan status akun dibaca ulang dari basis data, bukan dipercaya dari
-  // isi token. Akun yang dinonaktifkan setelah token terbit harus langsung
-  // kehilangan akses.
   const user = await prisma.user.findUnique({
     where: { id: payload.sub },
     select: { id: true, role: true, region: true, isActive: true, activePeriod: true },
@@ -93,14 +85,6 @@ export async function authenticate(
   next();
 }
 
-/**
- * Pembatas peran.
- *
- * Ini yang hilang di versi lama: fungsi serupa sudah ditulis tetapi tidak
- * pernah dipasang di satu route pun, sehingga setiap akun yang berhasil masuk
- * -- termasuk orang tua -- bisa membaca seluruh data balita sedesa, mengubah
- * data anak orang lain, dan menonaktifkan akun siapa saja.
- */
 export function authorize(...roles: Role[]) {
   return (req: Request, _res: Response, next: NextFunction): void => {
     const auth = requireAuth(req);
@@ -113,11 +97,6 @@ export function authorize(...roles: Role[]) {
   };
 }
 
-/**
- * Mengizinkan pemilik sumber daya, atau peran tertentu sebagai pengecualian.
- * Contoh: orang tua boleh membuka profilnya sendiri, kader dan admin boleh
- * membuka profil siapa pun.
- */
 export function authorizeSelfOr(paramName: string, ...roles: Role[]) {
   return (req: Request, _res: Response, next: NextFunction): void => {
     const auth = requireAuth(req);

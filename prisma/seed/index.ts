@@ -10,19 +10,8 @@ import { growths } from "./data/growth.data.js";
 import { users } from "./data/users.data.js";
 import { vaccines } from "./data/vaccine.data.js";
 
-/**
- * Penyemaian basis data dengan data penelitian Desa Jipang.
- *
- * Perbedaan mendasar dari seeder lama: status gizi tidak lagi ditulis apa
- * adanya dari berkas data, melainkan dihitung melalui pipeline penilaian yang
- * sama dengan yang dipakai saat kader mencatat penimbangan. Dengan begitu isi
- * basis data hasil semai konsisten dengan aturan yang berlaku sekarang -- dan
- * sekaligus menjadi uji asap bahwa pipeline itu benar-benar berjalan.
- */
-
 const prisma = new PrismaClient();
 
-/** Memetakan penanda lama seperti "P1" dan "C3" ke UUID yang sebenarnya. */
 const idMap = new Map<string, string>();
 
 function resolveId(legacyId: string): string {
@@ -43,7 +32,6 @@ function mustParseDate(value: string, context: string): Date {
 }
 
 async function clearDatabase(): Promise<void> {
-  // Urutan mengikuti ketergantungan kunci asing.
   await prisma.auditLog.deleteMany();
   await prisma.passwordReset.deleteMany();
   await prisma.otpRequest.deleteMany();
@@ -55,8 +43,6 @@ async function clearDatabase(): Promise<void> {
 }
 
 async function seedUsers(): Promise<void> {
-  // Seluruh data semai memakai kata sandi yang sama, sehingga cukup di-hash
-  // sekali alih-alih sekali per pengguna.
   const passwordCache = new Map<string, string>();
 
   for (const user of users) {
@@ -97,7 +83,7 @@ async function seedChildren(): Promise<void> {
         gender: child.gender,
         placeOfBirth: child.placeOfBirth,
         dateOfBirth: mustParseDate(child.dateOfBirth, `balita ${child.fullName}`),
-        // Data lama menuliskan "-" untuk ayah yang tidak tercatat.
+
         father: child.father === "-" ? null : child.father,
         mother: child.mother === "-" ? null : child.mother,
         orderOfChild: child.orderOfChild,
@@ -138,7 +124,6 @@ async function seedGrowth(): Promise<void> {
       where: { id: childId },
     });
 
-    // Urut menaik supaya rantai kenaikan berat dihitung dari yang paling awal.
     const ordered = records
       .map((record) => ({
         ...record,
@@ -164,8 +149,6 @@ async function seedGrowth(): Promise<void> {
         previous,
       });
 
-      // Satu penimbangan per balita per bulan dijamin basis data; data lama
-      // sesekali memuat dua baris untuk bulan yang sama.
       if (usedPeriods.has(assessment.period)) {
         console.warn(
           `  ! ${child.fullName}: penimbangan ganda pada ${assessment.period} dilewati`,
@@ -200,7 +183,7 @@ async function seedGrowth(): Promise<void> {
           isFlagged: assessment.isFlagged,
           flagReason: assessment.flagReason,
           note: record.note || null,
-          // Data historis; kader pencatatnya tidak tercatat pada data lama.
+
           measuredById: null,
         },
       });

@@ -1,13 +1,3 @@
-/**
- * Data pengguna hasil penelitian di Desa Jipang.
- *
- * Blok pemanggilan di bawah disalin apa adanya dari seeder lama
- * (main:src/seeders/user.seeder.js) supaya isinya tidak berubah sedikit pun.
- * Yang diganti hanya fungsi penampungnya: kata sandi tidak lagi di-hash di
- * sini melainkan saat penyemaian, dan id lama seperti "P1" dipertahankan
- * sebagai penanda relasi lalu dipetakan ke UUID.
- */
-
 export interface SeedUser {
   legacyId: string;
   email: string;
@@ -55,21 +45,6 @@ const createUser = (
   });
 };
 
-// ---------------------------------------------------------------------------
-// Disalin dari seeder lama mulai dari sini.
-// ---------------------------------------------------------------------------
-
-// createUser("P1", "alice.johnson@gmail.com", "password123", "Parent", true);
-// createUser("P2", "bob.williams@gmail.com", "password123", "Parent", false);
-// createUser("P3", "carol.davis@gmail.com", "password123", "Parent", false);
-// createUser("P4", "david.miller@gmail.com", "password123", "Parent", true);
-// createUser("P5", "eva.garcia@gmail.com", "password123", "Parent", false);
-
-// createUser("O1", "admin.ofc@gmail.com", "password123", "Admin", true);
-// createUser("O6", "daniel.ofc@gmail.com", "password123", "Officer", true);
-// createUser("O7", "cornelia.ofc@gmail.com", "password123", "Officer", true);
-
-// Create Admin User
 createUser(
   "A1",
   "nutrigrow.ofc@gmail.com",
@@ -85,8 +60,6 @@ createUser(
   new Date("9999-12-31 23:59:59.000 Z")
 );
 
-// Create Parent Users
-//RW1
 createUser(
   "P1",
   "uswatun@gmail.com",
@@ -144,7 +117,6 @@ createUser(
   new Date("2045-07-16 00:00:00.000 Z")
 );
 
-//RW2
 createUser(
   "P5",
   "rinawati@gmail.com",
@@ -188,7 +160,6 @@ createUser(
   new Date("2045-07-16 00:00:00.000 Z")
 );
 
-//RW3
 createUser(
   "P8",
   "intan@gmail.com",
@@ -204,7 +175,6 @@ createUser(
   new Date("2045-07-16 00:00:00.000 Z")
 );
 
-// Create Officer Users
 createUser(
   "O1",
   "tarsiti@gmail.com",
@@ -275,4 +245,3 @@ createUser(
   "RW5",
   new Date("2045-07-16 00:00:00.000 Z")
 );
-

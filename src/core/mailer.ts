@@ -2,13 +2,6 @@ import nodemailer from "nodemailer";
 import { env } from "../config/env.js";
 import { logger } from "./logger.js";
 
-/**
- * Pengirim surel.
- *
- * Kredensial kini datang dari environment. Versi lama menuliskan alamat Gmail
- * beserta app password langsung di dalam kode sumber, dan nilainya sudah
- * terlanjur masuk ke riwayat git.
- */
 const transporter = nodemailer.createTransport({
   host: env.SMTP_HOST,
   port: env.SMTP_PORT,

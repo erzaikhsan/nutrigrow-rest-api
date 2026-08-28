@@ -1,14 +1,6 @@
 import { z } from "zod";
 import { legacyDateSchema } from "../shared.schema.js";
 
-/**
- * Nama vaksin masih berupa teks bebas, sama seperti versi lama, sehingga
- * "Polio I" dan "Polio 1" tetap dianggap dua imunisasi berbeda dan pengecekan
- * duplikat lolos begitu saja. Perbaikannya berupa tabel master vaksin beserta
- * jadwalnya; itu bagian dari Tier B dan menuntut layar baru di aplikasi, jadi
- * ditunda. Sementara ini nama dinormalkan spasinya agar duplikat yang paling
- * kentara tetap tertangkap.
- */
 const vaccineNameSchema = z
   .string()
   .trim()

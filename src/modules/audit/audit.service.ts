@@ -2,19 +2,6 @@ import type { AuditAction, Prisma } from "@prisma/client";
 import { prisma } from "../../core/prisma.js";
 import { logger } from "../../core/logger.js";
 
-/**
- * Jejak audit.
- *
- * Data kesehatan anak yang bisa diubah dan dihapus tanpa meninggalkan jejak
- * tidak bisa dipertanggungjawabkan -- tidak ada cara menjawab "siapa yang
- * mengubah berat badan ini, dan berapa nilainya sebelum diubah".
- *
- * Pencatatan sengaja tidak boleh menggagalkan operasi utamanya: kegagalan
- * menulis jejak dicatat sebagai peringatan, bukan dilempar. Kehilangan satu
- * baris audit lebih ringan daripada menggagalkan penimbangan yang sudah
- * terlanjur tersimpan.
- */
-
 export interface AuditEntry {
   actorId: string | null;
   action: AuditAction;
@@ -44,10 +31,6 @@ export async function recordAudit(entry: AuditEntry): Promise<void> {
   }
 }
 
-/**
- * Varian yang ikut dalam transaksi pemanggil. Dipakai bila jejak harus batal
- * bersama operasinya, misalnya penghapusan data.
- */
 export async function recordAuditTx(
   tx: Prisma.TransactionClient,
   entry: AuditEntry,

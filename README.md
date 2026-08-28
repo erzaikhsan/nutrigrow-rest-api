@@ -176,6 +176,48 @@ Sebelum diimpor, lingkar kepala tetap dicatat dan statusnya `Unknown`. Angkanya
 sengaja tidak ditulis tangan agar tidak ada nilai rujukan yang tidak
 terverifikasi masuk ke dalam analisis.
 
+`src/domain/hcfa-reference.ts` adalah **berkas hasil generate** — jangan
+disunting manual, karena akan tertimpa saat perintah di atas dijalankan lagi.
+
+---
+
+## Catatan metodologi
+
+Keputusan perhitungan yang berpengaruh langsung ke hasil analisis. Seluruhnya
+terpusat di `src/domain/`, sehingga perubahan cukup pada satu tempat.
+
+**Z-score dihitung, bukan hanya kategorinya.** Tabel WHO di proyek ini memuat
+garis SD (−3 sampai +3), bukan parameter LMS. Nilai di antara dua garis
+diperoleh lewat interpolasi linear; nilai di luar ±3 SD diekstrapolasi memakai
+lebar pita SD terluar, sesuai anjuran WHO. Hasilnya dibulatkan dua angka di
+belakang koma.
+
+**Kategori diturunkan dari z-score.** Ambangnya mengikuti WHO: `z < −3` sangat
+kurang, `−3 ≤ z < −2` kurang, `−2 ≤ z ≤ 2` normal, `z > 2` lebih. Implementasi
+sebelumnya membandingkan langsung ke garis SD dan tanpa sengaja memakai batas
+berbeda antar indikator — tinggi tepat di −2 SD dinilai *stunted*, sedangkan
+berat tepat di −2 SD dinilai normal. Kini keduanya konsisten.
+
+**Umur dalam bulan penuh terlampaui.** Balita lahir 28 Juli yang ditimbang
+1 Agustus berumur 0 bulan, dan baru 1 bulan pada 28 Agustus. Implementasi
+sebelumnya memakai selisih bulan kalender sehingga baris tabel WHO yang dipakai
+bergeser satu bulan.
+
+**Ambang LiLA (MUAC)** untuk umur 6–59 bulan: `< 11,5 cm` gizi buruk akut,
+`11,5–12,5 cm` gizi kurang akut. Di luar rentang umur itu tidak dinilai, dan
+statusnya dibedakan dari "normal".
+
+**Penandaan data meragukan.** Nilai dengan `|z| > 6` tetap disimpan tetapi
+ditandai untuk diverifikasi, mengikuti praktik WHO Anthro. Menolaknya berisiko
+membuang kasus gizi buruk yang justru paling perlu tercatat.
+
+> **Perlu diverifikasi.** Tabel Kenaikan Berat Badan Minimum (KBM) di
+> `src/domain/weight-gain.ts` mengikuti angka yang lazim dipakai pada Petunjuk
+> Teknis Pemantauan Pertumbuhan Balita Kementerian Kesehatan RI. Mohon
+> dicocokkan dengan edisi pedoman yang Anda rujuk di skripsi sebelum dipakai
+> untuk analisis. Seluruh tabelnya berada pada satu konstanta agar koreksinya
+> cukup satu tempat.
+
 ---
 
 ## Koreksi pada data semai

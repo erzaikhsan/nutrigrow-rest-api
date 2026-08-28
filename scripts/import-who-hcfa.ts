@@ -1,18 +1,3 @@
-/**
- * Mengubah tabel resmi WHO "head circumference-for-age" menjadi berkas
- * TypeScript yang dipakai aplikasi.
- *
- * Pemakaian:
- *   npm run who:import-hcfa -- <berkas-laki-laki.txt> <berkas-perempuan.txt>
- *
- * Berkas masukan adalah "expanded tables" berformat teks dari WHO Child Growth
- * Standards, yang berisi kolom Month, L, M, S, lalu garis-garis SD. Skrip ini
- * memetakan kolom berdasarkan namanya, sehingga tahan terhadap perbedaan urutan
- * maupun pemisah tab/spasi antar edisi berkas.
- *
- * Keluaran ditulis ke src/domain/hcfa-reference.ts.
- */
-
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -148,14 +133,6 @@ function main(): void {
   const girls = parseTable(resolve(girlsPath));
 
   const output = `import type { ByAge, Sex } from "./who-reference.js";
-
-/**
- * Standar WHO lingkar kepala menurut umur (head circumference-for-age).
- *
- * BERKAS INI DIHASILKAN OLEH SKRIP -- jangan disunting manual.
- * Sumber : ${boysPath} , ${girlsPath}
- * Perintah: npm run who:import-hcfa
- */
 
 export const HCFA_WHO_REFERENCE: Record<Sex, ByAge> = {
   M: {

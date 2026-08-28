@@ -1,12 +1,8 @@
 import { z } from "zod";
 
-// Node >= 20.12 bisa memuat .env tanpa paket dotenv. Di produksi variabel
-// biasanya sudah disuntikkan lewat environment, jadi file yang tidak ada
-// bukan kondisi error.
 try {
   process.loadEnvFile();
 } catch {
-  // sengaja diabaikan
 }
 
 const EnvSchema = z.object({
@@ -23,13 +19,6 @@ const EnvSchema = z.object({
     .min(32, "JWT_SECRET wajib minimal 32 karakter. Generate: openssl rand -base64 48"),
   JWT_EXPIRES_IN: z.string().default("24h"),
 
-  /**
-   * Masa aktif akun sejak pendaftaran, dalam tahun. Kolom active_period sudah
-   * ada sejak versi lama dan dipakai untuk menonaktifkan akun kedaluwarsa,
-   * tetapi tidak pernah ada yang mengisinya -- sehingga setiap pendaftaran
-   * gagal dengan pelanggaran NOT NULL. Nilainya adalah keputusan kebijakan,
-   * jadi dijadikan konfigurasi.
-   */
   ACCOUNT_ACTIVE_YEARS: z.coerce.number().int().positive().default(5),
 
   SMTP_HOST: z.string().min(1),
@@ -48,8 +37,6 @@ if (!parsed.success) {
     .map((issue) => `  - ${issue.path.join(".")}: ${issue.message}`)
     .join("\n");
 
-  // Gagal saat boot, bukan saat request pertama masuk. Versi lama membiarkan
-  // SECRET_KEY yang kosong lolos sampai ada yang mencoba login.
   console.error(`Konfigurasi environment tidak valid:\n${detail}`);
   process.exit(1);
 }

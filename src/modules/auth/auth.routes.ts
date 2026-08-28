@@ -4,13 +4,6 @@ import { rateLimit } from "express-rate-limit";
 import { authenticate, authorize } from "../../middlewares/auth.middleware.js";
 import * as AuthController from "./auth.controller.js";
 
-/**
- * Pembatas laju untuk endpoint yang bisa disalahgunakan.
- *
- * Versi lama tidak punya pembatas sama sekali: kata sandi bisa ditebak
- * sebanyak-banyaknya, dan endpoint permintaan OTP bisa dipakai membanjiri
- * surel orang lain.
- */
 const rejection = (message: string) => ({
   success: false,
   message,
@@ -49,10 +42,6 @@ authRouter.post("/register/otp-request", otpLimiter, AuthController.requestOtp);
 authRouter.post("/register/verify", otpLimiter, AuthController.verifyOtp);
 authRouter.post("/register/parent", AuthController.registerParent);
 
-// Pendaftaran kader kini menuntut admin yang sudah masuk. Sebelumnya endpoint
-// ini terbuka sepenuhnya, sehingga siapa pun bisa membuat akun kader -- yang
-// dengan pembatas peran baru berarti akses baca ke seluruh data balita
-// se-wilayah.
 authRouter.post(
   "/register/officer",
   authenticate,
@@ -74,6 +63,5 @@ authRouter.delete(
   AuthController.activateAccount,
 );
 
-// Jalur pemulihan kata sandi; sebelumnya tidak ada sama sekali.
 authRouter.post("/password/forgot", otpLimiter, AuthController.forgotPassword);
 authRouter.post("/password/reset", otpLimiter, AuthController.resetPassword);

@@ -1,27 +1,3 @@
-/**
- * Data balita hasil penelitian di Desa Jipang, disalin apa adanya dari
- * main:src/seeders/children.seeder.js.
- *
- * Status gizi yang tercantum pada data lama sengaja diabaikan: nilainya
- * dihitung ulang saat penyemaian memakai rumus yang sudah diperbaiki, sehingga
- * basis data hasil semai konsisten dengan logika yang berlaku sekarang.
- *
- * KOREKSI DATA
- * Ukuran saat lahir pada berkas lama berselisih dengan baris penimbangan
- * kelahiran di growth.seeder.js untuk peristiwa yang sama:
- *
- *   berat          3,2 kg  ->  3,4 kg
- *   tinggi         50 cm   ->  50,2 cm
- *   lingkar kepala 10 cm   ->  34,5 cm
- *
- * Nilai lama seragam untuk seluruh balita, jadi bukan hasil pengukuran
- * per anak melainkan nilai bawaan saat pengembangan. Angka 10 pada kolom
- * lingkar kepala berasal dari lingkar lengan (10,5 cm) -- lingkar kepala bayi
- * baru lahir tidak mungkin 10 cm. Ketiganya disamakan dengan baris penimbangan
- * kelahiran, yang menjadi titik awal grafik pertumbuhan; tanpa itu profil
- * balita akan menampilkan angka yang berbeda dari grafiknya sendiri.
- */
-
 export interface SeedChild {
   legacyId: string;
   legacyParentId: string;
@@ -75,11 +51,6 @@ const createChildren = (
   });
 };
 
-// ---------------------------------------------------------------------------
-// Disalin dari seeder lama mulai dari sini.
-// ---------------------------------------------------------------------------
-
-//P1
 createChildren(
   "C1",
   "P1",
@@ -117,7 +88,6 @@ createChildren(
   34.5
 );
 
-//P2
 createChildren(
   "C3",
   "P2",
@@ -137,7 +107,6 @@ createChildren(
   34.5
 );
 
-//P3
 createChildren(
   "C4",
   "P3",
@@ -157,7 +126,6 @@ createChildren(
   34.5
 );
 
-//P4
 createChildren(
   "C5",
   "P4",
@@ -177,7 +145,6 @@ createChildren(
   34.5
 );
 
-//P5
 createChildren(
   "C6",
   "P5",
@@ -197,7 +164,6 @@ createChildren(
   34.5
 );
 
-//P6
 createChildren(
   "C7",
   "P6",
@@ -217,7 +183,6 @@ createChildren(
   34.5
 );
 
-//P7
 createChildren(
   "C8",
   "P7",
@@ -237,7 +202,6 @@ createChildren(
   34.5
 );
 
-//P8
 createChildren(
   "C9",
   "P8",
@@ -256,4 +220,3 @@ createChildren(
   "Normal",
   34.5
 );
-

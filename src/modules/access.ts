@@ -2,21 +2,6 @@ import { Region, Role } from "@prisma/client";
 import { forbidden } from "../core/errors.js";
 import type { AuthContext } from "../middlewares/auth.middleware.js";
 
-/**
- * Aturan siapa boleh melihat data siapa.
- *
- * Versi lama tidak punya lapisan ini sama sekali. Setiap akun yang berhasil
- * masuk bisa membaca seluruh data balita sedesa, mengubah data anak orang
- * lain, dan mengunduh laporan lengkap. Untuk data kesehatan anak, itu bukan
- * kelalaian kecil.
- *
- * Ringkasan aturan:
- *   Admin   - seluruh wilayah
- *   Officer - wilayahnya sendiri; kader berwilayah "Village" bertugas
- *             tingkat desa sehingga meliputi semua RW
- *   Parent  - hanya dirinya sendiri dan anak-anaknya
- */
-
 export function isVillageWide(auth: AuthContext): boolean {
   return auth.role === Role.Admin || auth.region === Region.Village;
 }
@@ -58,17 +43,12 @@ export function assertChildAccess(
   }
 }
 
-/** Hanya kader dan admin yang mencatat data pengukuran. */
 export function assertCanRecord(auth: AuthContext): void {
   if (auth.role !== Role.Officer && auth.role !== Role.Admin) {
     throw forbidden("Hanya kader dan admin yang dapat mencatat data ini");
   }
 }
 
-/**
- * Menyusun penyaring wilayah untuk kueri daftar, sehingga pembatasan terjadi
- * di basis data dan bukan dengan menyaring hasil setelah semua baris terambil.
- */
 export function regionFilter(auth: AuthContext): { region?: Region } {
   if (isVillageWide(auth)) return {};
   return { region: auth.region };

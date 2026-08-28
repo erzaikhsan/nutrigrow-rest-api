@@ -51,16 +51,6 @@ function toPrevious(record: Growth | null): PreviousWeighIn | null {
   };
 }
 
-/**
- * Menghitung ulang rantai penilaian sejak tanggal tertentu.
- *
- * Kenaikan berat dan hitungan "tidak naik berturut-turut" bergantung pada
- * penimbangan sebelumnya. Karena itu menyunting atau menghapus satu baris
- * membuat seluruh baris sesudahnya tidak lagi sahih. Versi lama tidak
- * memperhitungkan hal ini sama sekali -- tetapi versi lama juga tidak menyimpan
- * nilai turunannya, sehingga masalahnya baru muncul sekarang dan harus
- * ditangani sejak awal.
- */
 async function recomputeChain(
   tx: Prisma.TransactionClient,
   child: Children,
@@ -130,10 +120,6 @@ function translatePeriodConflict(error: unknown): never {
   throw error;
 }
 
-// ---------------------------------------------------------------------------
-// Perintah
-// ---------------------------------------------------------------------------
-
 export async function createGrowth(
   input: CreateGrowthInput,
   auth: AuthContext,
@@ -193,8 +179,6 @@ export async function createGrowth(
         },
       });
 
-      // Penimbangan bisa dicatat menyusul untuk bulan yang terlewat, sehingga
-      // baris-baris sesudahnya perlu dinilai ulang.
       await recomputeChain(tx, child, input.date);
 
       await recordAuditTx(tx, {
@@ -240,7 +224,6 @@ export async function updateGrowth(
         },
       });
 
-      // Dinilai ulang sejak tanggal terlama yang tersentuh perubahan.
       const from =
         input.date.getTime() < existing.date.getTime()
           ? input.date
@@ -276,9 +259,6 @@ export async function deleteGrowth(
   assertChildAccess(auth, existing.child);
 
   await prisma.$transaction(async (tx) => {
-    // Dihapus lunak: data kesehatan yang sudah tercatat tidak dibuang, hanya
-    // dikeluarkan dari perhitungan. `period` dikosongkan agar bulan yang sama
-    // bisa dicatat ulang tanpa bentrok dengan indeks unik.
     await tx.growth.update({
       where: { id },
       data: { deletedAt: new Date(), period: null },
@@ -297,10 +277,6 @@ export async function deleteGrowth(
 
   return toGrowthDto(existing);
 }
-
-// ---------------------------------------------------------------------------
-// Kueri
-// ---------------------------------------------------------------------------
 
 export async function getGrowthById(
   id: string,
@@ -345,9 +321,7 @@ export async function listGrowthByChildInYear(
     where: {
       childId,
       ...ACTIVE,
-      // Tahun kini bertipe angka. Versi lama menerimanya sebagai string,
-      // sehingga `year + 1` menjadi "20251" dan batas atas rentang melompat
-      // ribuan tahun ke depan.
+
       date: {
         gte: new Date(Date.UTC(year, 0, 1)),
         lt: new Date(Date.UTC(year + 1, 0, 1)),

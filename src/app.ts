@@ -10,7 +10,6 @@ import { apiRouter } from "./modules/index.js";
 export function createApp() {
   const app = express();
 
-  // Di belakang reverse proxy, dibutuhkan agar rate limiter membaca IP asli.
   app.set("trust proxy", 1);
   app.disable("x-powered-by");
 
@@ -18,9 +17,6 @@ export function createApp() {
 
   app.use(
     cors({
-      // Versi lama memasang origin "*" bersama credentials: true, kombinasi
-      // yang tidak valid dan terlalu terbuka. Daftar origin kini dikendalikan
-      // lewat environment; kosong berarti bebas, hanya dipakai saat development.
       origin: env.corsOrigins.length > 0 ? env.corsOrigins : true,
       credentials: env.corsOrigins.length > 0,
     }),

@@ -4,8 +4,6 @@ import { logger } from "./core/logger.js";
 import { connectDatabase, disconnectDatabase } from "./core/prisma.js";
 
 async function bootstrap(): Promise<void> {
-  // Basis data diperiksa sebelum port dibuka, supaya server tidak pernah
-  // tampak sehat padahal setiap request pasti gagal.
   await connectDatabase();
 
   const app = createApp();
@@ -22,7 +20,6 @@ async function bootstrap(): Promise<void> {
       void disconnectDatabase().finally(() => process.exit(0));
     });
 
-    // Jaring pengaman bila ada koneksi yang menggantung.
     setTimeout(() => {
       logger.error("Penutupan melewati batas waktu, memaksa keluar");
       process.exit(1);

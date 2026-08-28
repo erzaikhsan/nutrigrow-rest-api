@@ -12,13 +12,6 @@ interface ErrorBody {
   errors?: unknown;
 }
 
-/**
- * Satu tempat untuk seluruh kegagalan.
- *
- * Express 5 meneruskan promise yang ditolak dari handler async ke sini secara
- * otomatis, jadi tidak perlu lagi blok try/catch yang diulang di setiap
- * controller seperti pada versi lama.
- */
 export function errorHandler(
   error: unknown,
   req: Request,
@@ -62,8 +55,7 @@ function toErrorBody(error: unknown): ErrorBody {
       success: false,
       message: "Data yang dikirim tidak valid",
       code: "VALIDATION_ERROR",
-      // Bentuk ini cocok dengan cabang `errorResponse.errors` pada helper
-      // processError() di aplikasi, yang mengambil pesan pertama tiap field.
+
       errors: Object.fromEntries(
         Object.entries(error.flatten().fieldErrors).filter(
           ([, messages]) => messages && messages.length > 0,
@@ -105,7 +97,6 @@ function toErrorBody(error: unknown): ErrorBody {
     }
   }
 
-  // Detail kegagalan internal tidak pernah dibocorkan ke klien.
   return {
     success: false,
     message: env.isProduction

@@ -1,20 +1,9 @@
 import type { Children, Growth } from "@prisma/client";
 import { calculateAgeInMonths } from "../../domain/growth-standards.js";
 
-/**
- * Rekapitulasi kegiatan UPGK bulanan posyandu.
- *
- * Versi lama menulis enam belas fungsi penghitung yang hampir seluruhnya sama:
- * masing-masing membangun ulang Map dari daftar penimbangan yang sama, lalu
- * menaruh hasilnya ke ember umur dan jenis kelamin dengan kode yang identik.
- * Semuanya kini menjadi satu fungsi berpredikat, sehingga aturan tiap baris
- * berdiri sendiri dan bisa dibaca dalam satu tarikan.
- */
-
 const AGE_GROUPS = ["0_4", "5", "6_11", "12_23", "24_59"] as const;
 export type AgeGroup = (typeof AGE_GROUPS)[number];
 
-/** Nama kolom angka pada satu baris UPGK, tanpa kolom label. */
 export type UpgkCell =
   | "0_4_L"
   | "0_4_P"
@@ -73,24 +62,15 @@ export function ageGroupOf(ageInMonths: number): AgeGroup | null {
   return null;
 }
 
-/**
- * Tanggal acuan penghitungan umur: hari terakhir bulan laporan.
- *
- * Versi lama keliru dua kali di sini. Nilai bulan yang diterima sudah berbasis
- * nol, lalu dikurangi satu lagi sehingga umur dihitung untuk bulan sebelumnya;
- * dan karena acuannya jatuh pada tanggal 1, perbandingan tanggal hampir selalu
- * mengurangi satu bulan lagi. Akibatnya seluruh kolom umur pada laporan
- * konsisten menggeser balita ke kelompok yang lebih muda.
- */
 export function referenceDateFor(month: number, year: number): Date {
   return new Date(Date.UTC(year, month + 1, 0));
 }
 
 export interface UpgkContext {
   children: Children[];
-  /** Penimbangan bulan laporan, dikunci per balita. */
+
   current: Map<string, Growth>;
-  /** Penimbangan bulan sebelumnya. */
+
   previous: Map<string, Growth>;
   referenceDate: Date;
   month: number;
@@ -99,10 +79,6 @@ export interface UpgkContext {
 
 type RowPredicate = (child: Children, context: UpgkContext) => boolean;
 
-/**
- * Menghitung balita yang memenuhi predikat, dikelompokkan menurut umur dan
- * jenis kelamin.
- */
 export function countRow(
   kegiatan: string,
   context: UpgkContext,
@@ -131,15 +107,6 @@ export function countRow(
 
 const weighed: RowPredicate = (child, ctx) => ctx.current.has(child.id);
 
-/**
- * Susunan baris laporan UPGK.
- *
- * Perbedaan penting dari versi lama: "naik berat badan" kini berarti kenaikan
- * mencapai Kenaikan Berat Badan Minimum sesuai umur, bukan sekadar lebih berat
- * dari bulan lalu. Itu definisi yang dipakai KMS, dan nilainya sudah dihitung
- * serta disimpan saat penimbangan dicatat -- laporan tinggal membacanya, tidak
- * lagi menghitung ulang setiap kali dicetak.
- */
 export function buildUpgkRows(context: UpgkContext): UpgkRow[] {
   const growthOf = (child: Children): Growth | undefined =>
     context.current.get(child.id);
@@ -221,5 +188,4 @@ export function buildUpgkRows(context: UpgkContext): UpgkRow[] {
   ];
 }
 
-/** Baris "Jumlah Bayi Baru" hanya menampilkan total, sesuai format lama. */
 export const TOTAL_ONLY_ROW_LABEL = "Jumlah Bayi Baru";

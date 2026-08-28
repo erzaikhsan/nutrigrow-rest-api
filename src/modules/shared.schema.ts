@@ -2,16 +2,6 @@ import { Gender, Region } from "@prisma/client";
 import { z } from "zod";
 import { parseLegacyDate } from "../core/serialize.js";
 
-/**
- * Skema yang dipakai bersama antar modul.
- *
- * Validasi kini memakai zod, menggantikan express-validator. Bedanya bukan
- * sekadar pustaka: zod mengembalikan nilai yang sudah bertipe dan sudah
- * dikonversi, sehingga tanggal sampai di service sebagai objek Date, bukan
- * string yang diurai ulang di beberapa tempat dengan cara berbeda-beda.
- */
-
-/** Tanggal dalam format yang dikirim aplikasi: "2023-07-28 00:00:00.000 Z". */
 export const legacyDateSchema = z.string().transform((value, ctx) => {
   const parsed = parseLegacyDate(value);
 
@@ -65,17 +55,11 @@ export const regionParamSchema = z.object({
   region: regionSchema,
 });
 
-/** Parameter halaman untuk endpoint daftar. */
 export const paginationSchema = z.object({
   page: z.coerce.number().int().positive().optional(),
   size: z.coerce.number().int().positive().max(200).optional(),
 });
 
-/**
- * Pengukuran antropometri. Batas atas dan bawah di sini menolak nilai yang
- * mustahil; nilai yang sekadar tidak lazim tetap diterima lalu ditandai oleh
- * penapis kewajaran agar kasus gizi buruk tidak ikut terbuang.
- */
 export const weightSchema = z.coerce
   .number()
   .min(0.5, "Berat badan tidak wajar")

@@ -1,12 +1,3 @@
-/**
- * Standar z-score WHO untuk penilaian status gizi balita.
- *
- * Berkas ini adalah data murni, dipindahkan apa adanya dari implementasi
- * sebelumnya (main:src/utils/who_reference.js). Isinya sengaja tidak diubah
- * agar hasil klasifikasi tetap identik dengan versi yang dipakai pada
- * pengumpulan data penelitian.
- */
-
 export interface ZScoreBand {
   median: number;
   sd1: number;
@@ -19,10 +10,8 @@ export interface ZScoreBand {
 
 export type Sex = "M" | "F";
 
-/** Kunci dalam bulan, 0-60. */
 export type ByAge = Partial<Record<number, ZScoreBand>>;
 
-/** Kunci dalam sentimeter, dibulatkan ke kelipatan 0,5. */
 export type ByHeight = Partial<Record<number, ZScoreBand>>;
 
 export type WfhAgeGroup = "under_2y" | "under_5y" | "5y_and_over";

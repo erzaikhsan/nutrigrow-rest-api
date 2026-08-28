@@ -5,8 +5,6 @@ import * as ReportController from "./report.controller.js";
 
 export const reportRouter: Router = Router();
 
-// Laporan memuat data seluruh balita sekaligus, sehingga hanya untuk kader dan
-// admin. Sebelumnya cukup punya akun untuk bisa mengunduhnya.
 reportRouter.use(authenticate, authorize(Role.Admin, Role.Officer));
 
 reportRouter.get(

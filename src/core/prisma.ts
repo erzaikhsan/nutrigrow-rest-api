@@ -24,10 +24,6 @@ if (env.isDevelopment) {
 prisma.$on("warn", (event) => logger.warn(event.message, "prisma"));
 prisma.$on("error", (event) => logger.error(event.message, "prisma"));
 
-/**
- * Dipanggil saat boot. Versi lama menganggap server sehat walaupun basis data
- * mati, dan kegagalan baru terlihat pada request pertama.
- */
 export async function connectDatabase(): Promise<void> {
   await prisma.$connect();
   logger.info("Terhubung ke basis data");

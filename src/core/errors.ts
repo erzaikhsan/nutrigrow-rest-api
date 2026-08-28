@@ -1,12 +1,3 @@
-/**
- * Satu jenis error untuk seluruh aplikasi.
- *
- * Versi lama memakai `throw new Error(404)` lalu dibandingkan dengan
- * `err.message == 404` di setiap controller. Selain rapuh, pola itu membuat
- * satu jenis kegagalan tidak bisa dibedakan dari yang lain — dan sempat
- * menyebabkan konflik 409 dilaporkan sebagai 404 ke aplikasi.
- */
-
 export type ErrorCode =
   | "VALIDATION_ERROR"
   | "UNAUTHENTICATED"

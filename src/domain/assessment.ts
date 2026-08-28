@@ -22,14 +22,6 @@ import {
 } from "./weight-gain.js";
 import type { Sex } from "./who-reference.js";
 
-/**
- * Titik masuk tunggal untuk menilai satu pengukuran.
- *
- * Seluruh aturan gizi terkumpul di sini supaya service pencatatan tidak perlu
- * tahu urutan maupun saling-ketergantungan antar indikator, dan supaya
- * perhitungan yang sama tidak tersebar ulang di layanan laporan seperti dulu.
- */
-
 export interface MeasurementInput {
   dateOfBirth: Date;
   measuredAt: Date;
@@ -38,7 +30,7 @@ export interface MeasurementInput {
   height: number;
   headCircum: number;
   armCircum: number;
-  /** Penimbangan terakhir sebelum pengukuran ini, bila ada. */
+
   previous: PreviousWeighIn | null;
 }
 
@@ -64,7 +56,6 @@ export interface MeasurementAssessment {
   isFlagged: boolean;
   flagReason: string | null;
 
-  /** Turunan, tidak disimpan: dipakai untuk peringatan di lapisan penyajian. */
   needsReferral: boolean;
 }
 
@@ -138,11 +129,6 @@ export function assessMeasurement(
   };
 }
 
-/**
- * Balita dianggap lulus dari sasaran posyandu setelah melewati 60 bulan.
- * Dipakai untuk memutakhirkan status secara otomatis agar penyebut laporan
- * tidak ikut menghitung anak yang sudah bukan sasaran.
- */
 export function hasGraduated(dateOfBirth: Date, on: Date = new Date()): boolean {
   return calculateAgeInMonths(dateOfBirth, on) > MAX_TRACKED_AGE_IN_MONTHS;
 }

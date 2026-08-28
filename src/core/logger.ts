@@ -3,7 +3,7 @@ import { env } from "../config/env.js";
 
 export const logger = pino({
   level: env.isProduction ? "info" : "debug",
-  // Jangan pernah menuliskan kredensial atau token ke log.
+
   redact: {
     paths: [
       "req.headers.authorization",

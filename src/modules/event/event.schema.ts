@@ -5,7 +5,6 @@ import {
   regionSchema,
 } from "../shared.schema.js";
 
-/** Jam dalam format 24 jam, misalnya "09:00". Dulu tidak divalidasi sama sekali. */
 const timeSchema = z
   .string()
   .trim()

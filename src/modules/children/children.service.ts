@@ -22,7 +22,6 @@ import type {
   UpdateChildInput,
 } from "./children.schema.js";
 
-/** Catatan penanda pada baris penimbangan yang mewakili pengukuran saat lahir. */
 const BIRTH_RECORD_NOTE = "Pengukuran Saat Bayi Lahir";
 
 async function findChildOrFail(id: string): Promise<Children> {
@@ -31,11 +30,6 @@ async function findChildOrFail(id: string): Promise<Children> {
   return child;
 }
 
-/**
- * Orang tua hanya boleh mendaftarkan anaknya sendiri. Kader dan admin bebas
- * menentukan orang tua, tetapi id yang dikirim tetap harus milik akun berperan
- * orang tua -- versi lama menerima id apa pun tanpa memeriksanya.
- */
 async function resolveParentId(
   requestedParentId: string,
   auth: AuthContext,
@@ -59,13 +53,6 @@ async function resolveParentId(
   return parent.id;
 }
 
-/**
- * Menyusun baris penimbangan yang mewakili pengukuran saat lahir.
- *
- * Baris ini yang menjadi titik awal grafik pertumbuhan, sekaligus satu-satunya
- * sumber kebenaran status gizi saat lahir sejak kolom status dihapus dari
- * tabel balita.
- */
 function buildBirthGrowth(params: {
   dateOfBirth: Date;
   gender: "M" | "F";
@@ -136,9 +123,6 @@ export async function createChild(
         },
       });
 
-      // Data balita dan titik awal grafiknya lahir bersama-sama. Versi lama
-      // menulis keduanya di luar transaksi, sehingga kegagalan pada langkah
-      // kedua meninggalkan balita tanpa riwayat pertumbuhan sama sekali.
       await tx.growth.create({
         data: {
           childId: created.id,
@@ -223,8 +207,6 @@ export async function updateChild(
         },
       });
 
-      // Baris penimbangan tertua adalah pengukuran saat lahir; ia harus ikut
-      // menyesuaikan bila tanggal lahir atau ukuran lahir berubah.
       const birthRecord = await tx.growth.findFirst({
         where: { childId: id, deletedAt: null },
         orderBy: { date: "asc" },
@@ -282,8 +264,6 @@ export async function listChildren(
   query: ChildSearchInput,
   auth: AuthContext,
 ): Promise<ChildDto[]> {
-  // Orang tua tidak pernah melihat daftar balita umum. Endpoint ini dulu
-  // terbuka bagi siapa pun yang sudah masuk.
   if (auth.role === Role.Parent) {
     return listChildrenByParent(auth.id, auth);
   }
@@ -335,7 +315,7 @@ export async function listChildrenByRegion(
       region,
       ...statusFilter(query.includeInactive),
       ...nameFilter(query.name),
-      // Kader tetap dibatasi wilayahnya sendiri meski meminta wilayah lain.
+
       ...regionFilter(auth),
     },
     orderBy: { fullName: "asc" },
@@ -345,12 +325,6 @@ export async function listChildrenByRegion(
   return children.map(toChildDto);
 }
 
-/**
- * Menandai balita yang sudah melewati 60 bulan sebagai lulus.
- *
- * Tanpa ini, balita yang sudah bukan sasaran tetap terhitung selamanya dan
- * merusak penyebut seluruh laporan posyandu.
- */
 export async function graduateOverAgeChildren(
   auth: AuthContext,
 ): Promise<number> {

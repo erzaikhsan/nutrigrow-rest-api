@@ -40,14 +40,6 @@ function previousPeriodOf(month: number, year: number): string {
   return month === 0 ? periodOf(11, year - 1) : periodOf(month - 1, year);
 }
 
-/**
- * Mengambil penimbangan bulan tertentu untuk sekumpulan balita dalam satu
- * kueri, lalu mengunci per balita.
- *
- * Versi lama memanggil basis data satu sampai dua kali untuk SETIAP balita di
- * dalam perulangan. Untuk dua ratus balita, satu berkas PDF berarti sekitar
- * empat ratus kueri.
- */
 async function growthByPeriod(
   childIds: string[],
   period: string,
@@ -61,7 +53,6 @@ async function growthByPeriod(
   return new Map(records.map((record) => [record.childId, record]));
 }
 
-/** Penimbangan terakhir untuk balita yang tidak ditimbang pada bulan laporan. */
 async function latestGrowthFor(
   childIds: string[],
 ): Promise<Map<string, Growth>> {
@@ -95,10 +86,6 @@ async function loadChildren(
     orderBy: { fullName: "asc" },
   });
 }
-
-// ---------------------------------------------------------------------------
-// Laporan penimbangan balita
-// ---------------------------------------------------------------------------
 
 export async function generateChildrenReport(
   month: number,
@@ -137,8 +124,6 @@ export async function generateChildrenReport(
   const rows = children.map((child, index) => {
     const growth = current.get(child.id) ?? fallback.get(child.id);
 
-    // Balita yang belum pernah ditimbang sama sekali dulu membuat pembuatan
-    // laporan gagal dengan galat 500 karena hasil kueri null langsung dibaca.
     if (!growth) {
       return [
         index + 1,
@@ -209,10 +194,6 @@ export async function generateChildrenReport(
   return renderToBuffer(doc);
 }
 
-// ---------------------------------------------------------------------------
-// Laporan orang tua balita
-// ---------------------------------------------------------------------------
-
 export async function generateParentReport(
   auth: AuthContext,
   region?: Region,
@@ -232,8 +213,6 @@ export async function generateParentReport(
 
   if (parents.length === 0) throw notFound("Data orang tua");
 
-  // Jumlah balita per orang tua diambil sekali secara agregat, menggantikan
-  // satu kueri per orang tua di dalam perulangan.
   const counts = await prisma.children.groupBy({
     by: ["parentId"],
     where: {
@@ -299,10 +278,6 @@ export async function generateParentReport(
   return renderToBuffer(doc);
 }
 
-// ---------------------------------------------------------------------------
-// Laporan bulanan UPGK
-// ---------------------------------------------------------------------------
-
 export async function generateMonthlyReport(
   month: number,
   year: number,
@@ -325,9 +300,6 @@ export async function generateMonthlyReport(
 
   const ids = children.map((child) => child.id);
 
-  // Bulan sebelumnya dihitung dengan aritmetika periode, bukan pengurangan
-  // indeks bulan yang pada versi lama salah menugaskan hasilnya ke variabel
-  // yang keliru saat melewati batas tahun.
   const current = await growthByPeriod(ids, periodOf(month, year));
   const previous = await growthByPeriod(ids, previousPeriodOf(month, year));
 

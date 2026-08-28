@@ -28,7 +28,7 @@ const baseChildSchema = z.object({
   birth_weight: weightSchema,
   birth_height: heightSchema,
   birth_head_circum: headCircumSchema,
-  /// Opsional; belum tentu sudah terbit saat balita didaftarkan.
+
   nik: z
     .string()
     .trim()
@@ -36,7 +36,6 @@ const baseChildSchema = z.object({
     .optional(),
 });
 
-/** Tanggal lahir tidak boleh di masa depan. */
 const notInFuture = (date: Date): boolean => date.getTime() <= Date.now();
 
 export const createChildSchema = baseChildSchema.refine(
@@ -55,7 +54,7 @@ export const updateChildSchema = baseChildSchema
 
 export const childSearchSchema = paginationSchema.extend({
   name: z.string().trim().max(75).optional(),
-  /** Secara bawaan hanya balita yang masih menjadi sasaran posyandu. */
+
   includeInactive: z
     .enum(["true", "false"])
     .optional()

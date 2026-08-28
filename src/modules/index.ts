@@ -11,16 +11,6 @@ import {
 } from "./user/user.routes.js";
 import { vaccineRouter } from "./vaccine/vaccine.routes.js";
 
-/**
- * Titik kumpul seluruh modul domain.
- *
- * Setiap modul berisi route, controller, service, dan skema validasinya
- * sendiri, menggantikan pembagian lama per-lapisan (controllers/, services/,
- * repositories/) yang memaksa satu perubahan fitur menyentuh enam berkas.
- *
- * Prefiks dipertahankan persis seperti versi lama agar aplikasi yang sudah
- * beredar tidak perlu diubah.
- */
 export const apiRouter: Router = Router();
 
 apiRouter.use("/auth", authRouter);

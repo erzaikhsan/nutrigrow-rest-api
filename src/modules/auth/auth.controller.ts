@@ -14,12 +14,6 @@ import {
 } from "./auth.schema.js";
 import * as AuthService from "./auth.service.js";
 
-/**
- * Controller sengaja tipis: memvalidasi masukan, memanggil service, membungkus
- * hasil. Tidak ada lagi blok try/catch di setiap fungsi -- Express 5
- * meneruskan promise yang ditolak ke penangan galat terpusat.
- */
-
 export async function login(req: Request, res: Response): Promise<void> {
   const result = await AuthService.login(parseBody(req, loginSchema));
   ok(res, "Berhasil masuk", result);
@@ -82,7 +76,7 @@ export async function forgotPassword(
   res: Response,
 ): Promise<void> {
   await AuthService.forgotPassword(parseBody(req, forgotPasswordSchema));
-  // Jawaban selalu sama, terdaftar maupun tidak.
+
   ok(
     res,
     "Bila surel terdaftar, kode pemulihan telah dikirimkan",

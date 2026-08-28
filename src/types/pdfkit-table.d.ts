@@ -1,7 +1,3 @@
-/**
- * pdfkit-table tidak menyertakan definisi tipe. Deklarasi ini mencakup bagian
- * yang benar-benar dipakai laporan, sehingga sisa kode tetap bertipe ketat.
- */
 declare module "pdfkit-table" {
   import PDFDocument from "pdfkit";
 

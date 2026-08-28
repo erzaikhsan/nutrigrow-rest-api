@@ -13,12 +13,6 @@ import {
 } from "./growth.schema.js";
 import * as GrowthService from "./growth.service.js";
 
-/**
- * Aplikasi mengirim `date` lewat @Field pada permintaan GET untuk dua endpoint
- * bulanan. Retrofit menolak kombinasi itu, jadi sisi aplikasi tetap harus
- * diperbaiki; sementara itu backend menerima dari query maupun body agar
- * berfungsi pada kedua versi aplikasi.
- */
 function readDateInput(req: Request): { date: Date } {
   const query = req.query as Record<string, unknown>;
   const body = (req.body ?? {}) as Record<string, unknown>;

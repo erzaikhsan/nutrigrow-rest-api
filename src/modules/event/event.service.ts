@@ -20,11 +20,6 @@ import type {
 
 const ACTIVE = { deletedAt: null } as const;
 
-/**
- * Kegiatan berskala desa terlihat oleh semua wilayah, sedangkan kegiatan RW
- * hanya oleh wilayahnya sendiri. Aturan ini sudah ada sejak versi lama dan
- * dipertahankan; yang baru adalah penerapannya juga pada penulisan.
- */
 function visibilityFilter(auth: AuthContext): Prisma.EventWhereInput {
   if (isVillageWide(auth)) return {};
   return { region: { in: [auth.region, Region.Village] } };
@@ -37,7 +32,6 @@ function assertCanManage(auth: AuthContext, region: Region): void {
     throw forbidden("Hanya kader dan admin yang dapat mengelola kegiatan");
   }
 
-  // Kader RW tidak boleh membuat kegiatan atas nama desa atau RW lain.
   if (!isVillageWide(auth) && region !== auth.region) {
     throw forbidden("Anda hanya dapat mengelola kegiatan di wilayah Anda");
   }

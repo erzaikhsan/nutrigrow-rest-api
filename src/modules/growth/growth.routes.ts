@@ -7,7 +7,6 @@ export const growthRouter: Router = Router();
 
 growthRouter.use(authenticate);
 
-// Rute spesifik lebih dahulu agar tidak tertangkap oleh "/:id".
 growthRouter.get("/year/:childId", GrowthController.listGrowthByChildInYear);
 growthRouter.get("/children/:childId", GrowthController.listGrowthByChild);
 growthRouter.get(
