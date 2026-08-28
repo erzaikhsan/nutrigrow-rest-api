@@ -1,6 +1,6 @@
 /**
  * Data kegiatan posyandu, disalin apa adanya dari
- * legacy/src/seeders/event.seeder.js.
+ * main:src/seeders/event.seeder.js.
  */
 
 import { randomUUID } from "node:crypto";
@@ -140,6 +140,8 @@ createEvent(
   "11:00",
   "Rumah Ibu Yuli",
   "Posyandu balita di RW 5, silahkan bawa anak anda untuk di cek kesehatannya.",
-  "RW4"
+  // Dikoreksi dari "RW4". Empat posyandu lain berpasangan dengan RW-nya
+  // masing-masing, dan kadernya (Ibu Yuli) terdaftar di RW5.
+  "RW5"
 );
 

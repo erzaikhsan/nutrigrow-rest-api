@@ -2,7 +2,7 @@
  * Data pengguna hasil penelitian di Desa Jipang.
  *
  * Blok pemanggilan di bawah disalin apa adanya dari seeder lama
- * (legacy/src/seeders/user.seeder.js) supaya isinya tidak berubah sedikit pun.
+ * (main:src/seeders/user.seeder.js) supaya isinya tidak berubah sedikit pun.
  * Yang diganti hanya fungsi penampungnya: kata sandi tidak lagi di-hash di
  * sini melainkan saat penyemaian, dan id lama seperti "P1" dipertahankan
  * sebagai penanda relasi lalu dipetakan ke UUID.

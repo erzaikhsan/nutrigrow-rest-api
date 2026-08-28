@@ -2,7 +2,7 @@
  * Standar z-score WHO untuk penilaian status gizi balita.
  *
  * Berkas ini adalah data murni, dipindahkan apa adanya dari implementasi
- * sebelumnya (legacy/src/utils/who_reference.js). Isinya sengaja tidak diubah
+ * sebelumnya (main:src/utils/who_reference.js). Isinya sengaja tidak diubah
  * agar hasil klasifikasi tetap identik dengan versi yang dipakai pada
  * pengumpulan data penelitian.
  */
