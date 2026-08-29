@@ -5,7 +5,7 @@ services:
     plan: free
     region: singapore
     branch: dev
-    buildCommand: yarn install --frozen-lockfile && yarn db:generate && yarn db:deploy && yarn build
+    buildCommand: yarn install --frozen-lockfile --production=false && yarn db:generate && yarn db:deploy && yarn build
     startCommand: yarn start
     healthCheckPath: /health
     envVars:

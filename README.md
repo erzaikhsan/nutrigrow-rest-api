@@ -170,6 +170,12 @@ Build command menjalankan `yarn db:deploy` (`prisma migrate deploy`). Perintah
 itu idempoten — hanya menerapkan migrasi yang belum pernah jalan — jadi aman
 diulang setiap deploy.
 
+> **Jangan hapus `--production=false` dari build command.** Yarn 1 tidak memasang
+> `devDependencies` bila `NODE_ENV` bernilai `production`, dan `render.yaml`
+> memang menyetel `NODE_ENV=production`. Tanpa bendera itu, `prisma`,
+> `typescript`, dan `tsx` tidak ikut terpasang, lalu build berhenti pada
+> `yarn db:generate` dengan pesan "prisma: command not found".
+
 ### 3. Semai data produksi
 
 Dijalankan **manual dari laptop**, sekali saja, setelah deploy pertama berhasil:
@@ -181,6 +187,10 @@ DATABASE_URL="<connection-string-neon>" yarn db:seed
 > `db:seed` memanggil `clearDatabase()` yang mengosongkan seluruh tabel lebih
 > dulu. Itu tepat untuk database yang baru lahir dan berbahaya setelahnya.
 > Inilah alasan penyemaian tidak pernah diletakkan di build command.
+
+`db:recompute` **tidak perlu dijalankan** pada database yang baru disemai:
+`db:seed` sudah menghitung status memakai ambang Permenkes yang berlaku
+sekarang. Perintah itu hanya untuk database yang sudah berisi data lama.
 
 ### 4. Menahan instans agar tidak tidur
 
