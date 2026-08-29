@@ -9,6 +9,7 @@ import {
   parentRouter,
   userRouter,
 } from "./user/user.routes.js";
+import { validationRouter } from "./validation/validation.routes.js";
 import { vaccineRouter } from "./vaccine/vaccine.routes.js";
 
 export const apiRouter: Router = Router();
@@ -22,3 +23,4 @@ apiRouter.use("/growth", growthRouter);
 apiRouter.use("/vaccine", vaccineRouter);
 apiRouter.use("/event", eventRouter);
 apiRouter.use("/report", reportRouter);
+apiRouter.use("/validation", validationRouter);

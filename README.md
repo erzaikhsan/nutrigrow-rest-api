@@ -334,11 +334,41 @@ diperoleh lewat interpolasi linear; nilai di luar ±3 SD diekstrapolasi memakai
 lebar pita SD terluar, sesuai anjuran WHO. Hasilnya dibulatkan dua angka di
 belakang koma.
 
-**Kategori diturunkan dari z-score.** Ambangnya mengikuti WHO: `z < −3` sangat
-kurang, `−3 ≤ z < −2` kurang, `−2 ≤ z ≤ 2` normal, `z > 2` lebih. Implementasi
-sebelumnya membandingkan langsung ke garis SD dan tanpa sengaja memakai batas
-berbeda antar indikator — tinggi tepat di −2 SD dinilai *stunted*, sedangkan
-berat tepat di −2 SD dinilai normal. Kini keduanya konsisten.
+**Kategori diturunkan dari z-score, mengikuti Permenkes 2/2020.** Ambangnya
+diambil dari Lampiran B "Kategori dan Ambang Batas Status Gizi Anak":
+
+| Indeks | Kategori | Ambang |
+|---|---|---|
+| BB/U | Berat badan sangat kurang | `z < −3` |
+| | Berat badan kurang | `−3 ≤ z < −2` |
+| | Berat badan normal | `−2 ≤ z ≤ +1` |
+| | Risiko berat badan lebih | `z > +1` |
+| TB/U | Sangat pendek | `z < −3` |
+| | Pendek | `−3 ≤ z < −2` |
+| | Normal | `−2 ≤ z ≤ +3` |
+| | Tinggi | `z > +3` |
+| BB/TB | Gizi buruk | `z < −3` |
+| | Gizi kurang | `−3 ≤ z < −2` |
+| | Gizi baik | `−2 ≤ z ≤ +1` |
+| | Berisiko gizi lebih | `+1 < z ≤ +2` |
+| | Gizi lebih | `+2 < z ≤ +3` |
+| | Obesitas | `z > +3` |
+
+Implementasi sebelumnya memakai pembagian WHO — normal sampai `+2` pada BB/U dan
+BB/TB, tanpa kategori "Tinggi" pada TB/U, dan menggabungkan gizi lebih dengan
+obesitas. Padahal label yang ditampilkan aplikasi Android sudah memakai istilah
+Permenkes, sehingga balita dengan BB/U `z = +1,5` tampil sebagai "Berat Badan
+Normal" walaupun menurut Permenkes ia "Risiko Berat Badan Lebih". Ambang dan
+label kini sejalan.
+
+Implementasi yang lebih lama lagi membandingkan langsung ke garis SD dan tanpa
+sengaja memakai batas berbeda antar indikator — tinggi tepat di −2 SD dinilai
+*stunted*, sedangkan berat tepat di −2 SD dinilai normal. Keduanya sudah
+konsisten sejak penulisan ulang v2.
+
+> **Sesudah mengubah ambang, jalankan `npm run db:recompute`.** Z-score yang
+> tersimpan tidak berubah, tetapi kategorinya perlu dinilai ulang untuk seluruh
+> baris penimbangan yang sudah ada.
 
 **Umur dalam bulan penuh terlampaui.** Balita lahir 28 Juli yang ditimbang
 1 Agustus berumur 0 bulan, dan baru 1 bulan pada 28 Agustus. Implementasi
@@ -352,6 +382,28 @@ statusnya dibedakan dari "normal".
 **Penandaan data meragukan.** Nilai dengan `|z| > 6` tetap disimpan tetapi
 ditandai untuk diverifikasi, mengikuti praktik WHO Anthro. Menolaknya berisiko
 membuang kasus gizi buruk yang justru paling perlu tercatat.
+
+**Umur 24 bulan memakai tabel telentang.** Permenkes memuat umur 24 bulan pada
+dua tabel: PB/U (diukur telentang) dan TB/U (diukur berdiri), yang berbeda
+sekitar 0,7 cm. Karena aplikasi hanya menyimpan satu kolom tinggi tanpa penanda
+cara pengukuran, bulan ke-24 memakai tabel telentang dan beralih ke tabel berdiri
+mulai bulan ke-25. BB/PB dan BB/TB memakai pembagian yang sama.
+
+### Hasil validasi terhadap sumber resmi
+
+Seluruh tabel rujukan sudah dicocokkan baris per baris, bukan sampel:
+
+| Tabel | Sumber pembanding | Baris | Selisih |
+|---|---|---|---|
+| BB/U, PB/U, TB/U, BB/PB, BB/TB | Permenkes 2/2020, Tabel 1–5 dan 8–12 | 730 | 0 |
+| LK/U | WHO *head circumference-for-age z-scores* | 122 | 0 |
+
+Galat interpolasi terhadap rumus LMS, diuji pada 244.061 titik per indikator:
+rata-rata **0,015–0,020 SD** di dalam ±3 SD, naik menjadi **0,03–0,07 SD** di
+luar ±3 SD dengan maksimum 0,29 SD. Beda kategori 1,2–1,7 %, dan hampir
+seluruhnya terjadi tepat di garis SD karena tabel Permenkes sendiri dibulatkan
+satu angka di belakang koma — kader yang menghitung manual dengan tabel cetak
+akan memperoleh jawaban yang sama dengan aplikasi.
 
 > **Perlu diverifikasi.** Tabel Kenaikan Berat Badan Minimum (KBM) di
 > `src/domain/weight-gain.ts` mengikuti angka yang lazim dipakai pada Petunjuk

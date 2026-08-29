@@ -37,7 +37,7 @@ enum WfaStatus {
   SEVERELY_UNDERWEIGHT @map("Severely Underweight")
   UNDERWEIGHT          @map("Underweight")
   NORMAL               @map("Normal")
-  OVERWEIGHT_OBESE     @map("Overweight and Obese")
+  RISK_OVERWEIGHT      @map("Risk of Overweight")
   UNKNOWN              @map("Unknown")
 
   @@map("enum_wfa_status")
@@ -47,17 +47,20 @@ enum HfaStatus {
   SEVERELY_STUNTED @map("Severely Stunted")
   STUNTED          @map("Stunted")
   NORMAL           @map("Normal")
+  TALL             @map("Tall")
   UNKNOWN          @map("Unknown")
 
   @@map("enum_hfa_status")
 }
 
 enum WfhStatus {
-  SEVERELY_WASTING @map("Severely Wasting")
-  WASTING          @map("Wasting")
-  NORMAL           @map("Normal")
-  OVERWEIGHT_OBESE @map("Overweight and Obese")
-  UNKNOWN          @map("Unknown")
+  SEVERELY_WASTING         @map("Severely Wasting")
+  WASTING                  @map("Wasting")
+  NORMAL                   @map("Normal")
+  POSSIBLE_RISK_OVERWEIGHT @map("Possible Risk of Overweight")
+  OVERWEIGHT               @map("Overweight")
+  OBESE                    @map("Obese")
+  UNKNOWN                  @map("Unknown")
 
   @@map("enum_wfh_status")
 }

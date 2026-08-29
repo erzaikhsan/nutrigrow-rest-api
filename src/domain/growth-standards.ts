@@ -56,19 +56,33 @@ export function calculateZScore(value: number, band: ZScoreBand): number {
 
 const round2 = (value: number): number => Math.round(value * 100) / 100;
 
-function classifyWeightZ<T>(
-  z: number,
-  bands: { severe: T; mild: T; normal: T; high: T },
-): T {
-  if (z < -3) return bands.severe;
-  if (z < -2) return bands.mild;
-  if (z <= 2) return bands.normal;
-  return bands.high;
-}
-
 export interface IndicatorResult<TStatus> {
   zScore: number | null;
   status: TStatus;
+}
+
+export function resolveWfaBand(
+  ageInMonths: number,
+  sex: Sex,
+): ZScoreBand | null {
+  return WFA_WHO_REFERENCE[sex][ageInMonths] ?? null;
+}
+
+export function resolveHfaBand(
+  ageInMonths: number,
+  sex: Sex,
+): ZScoreBand | null {
+  return HFA_WHO_REFERENCE[sex][ageInMonths] ?? null;
+}
+
+export function resolveWfhBand(
+  ageInMonths: number,
+  height: number,
+  sex: Sex,
+): ZScoreBand | null {
+  const ageGroup = resolveWfhAgeGroup(ageInMonths);
+  const roundedHeight = Math.round(height * 2) / 2;
+  return WFH_WHO_REFERENCE[sex][ageGroup]?.[roundedHeight] ?? null;
 }
 
 export function calculateWfa(
@@ -76,20 +90,18 @@ export function calculateWfa(
   weight: number,
   sex: Sex,
 ): IndicatorResult<WfaStatus> {
-  const band = WFA_WHO_REFERENCE[sex][ageInMonths];
+  const band = resolveWfaBand(ageInMonths, sex);
   if (!band) return { zScore: null, status: WfaStatus.UNKNOWN };
 
   const zScore = calculateZScore(weight, band);
 
-  return {
-    zScore,
-    status: classifyWeightZ(zScore, {
-      severe: WfaStatus.SEVERELY_UNDERWEIGHT,
-      mild: WfaStatus.UNDERWEIGHT,
-      normal: WfaStatus.NORMAL,
-      high: WfaStatus.OVERWEIGHT_OBESE,
-    }),
-  };
+  let status: WfaStatus;
+  if (zScore < -3) status = WfaStatus.SEVERELY_UNDERWEIGHT;
+  else if (zScore < -2) status = WfaStatus.UNDERWEIGHT;
+  else if (zScore <= 1) status = WfaStatus.NORMAL;
+  else status = WfaStatus.RISK_OVERWEIGHT;
+
+  return { zScore, status };
 }
 
 export function calculateHfa(
@@ -97,7 +109,7 @@ export function calculateHfa(
   height: number,
   sex: Sex,
 ): IndicatorResult<HfaStatus> {
-  const band = HFA_WHO_REFERENCE[sex][ageInMonths];
+  const band = resolveHfaBand(ageInMonths, sex);
   if (!band) return { zScore: null, status: HfaStatus.UNKNOWN };
 
   const zScore = calculateZScore(height, band);
@@ -105,7 +117,8 @@ export function calculateHfa(
   let status: HfaStatus;
   if (zScore < -3) status = HfaStatus.SEVERELY_STUNTED;
   else if (zScore < -2) status = HfaStatus.STUNTED;
-  else status = HfaStatus.NORMAL;
+  else if (zScore <= 3) status = HfaStatus.NORMAL;
+  else status = HfaStatus.TALL;
 
   return { zScore, status };
 }
@@ -122,23 +135,20 @@ export function calculateWfh(
   height: number,
   sex: Sex,
 ): IndicatorResult<WfhStatus> {
-  const ageGroup = resolveWfhAgeGroup(ageInMonths);
-
-  const roundedHeight = Math.round(height * 2) / 2;
-  const band = WFH_WHO_REFERENCE[sex][ageGroup][roundedHeight];
+  const band = resolveWfhBand(ageInMonths, height, sex);
   if (!band) return { zScore: null, status: WfhStatus.UNKNOWN };
 
   const zScore = calculateZScore(weight, band);
 
-  return {
-    zScore,
-    status: classifyWeightZ(zScore, {
-      severe: WfhStatus.SEVERELY_WASTING,
-      mild: WfhStatus.WASTING,
-      normal: WfhStatus.NORMAL,
-      high: WfhStatus.OVERWEIGHT_OBESE,
-    }),
-  };
+  let status: WfhStatus;
+  if (zScore < -3) status = WfhStatus.SEVERELY_WASTING;
+  else if (zScore < -2) status = WfhStatus.WASTING;
+  else if (zScore <= 1) status = WfhStatus.NORMAL;
+  else if (zScore <= 2) status = WfhStatus.POSSIBLE_RISK_OVERWEIGHT;
+  else if (zScore <= 3) status = WfhStatus.OVERWEIGHT;
+  else status = WfhStatus.OBESE;
+
+  return { zScore, status };
 }
 
 export function calculateAgeInMonths(

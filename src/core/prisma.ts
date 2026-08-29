@@ -1,19 +1,20 @@
 import { PrismaClient } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { env } from "../config/env.js";
 import { logger } from "./logger.js";
 
-export const prisma = new PrismaClient({
-  log: env.isDevelopment
-    ? [
-        { emit: "event", level: "query" },
-        { emit: "event", level: "warn" },
-        { emit: "event", level: "error" },
-      ]
-    : [
-        { emit: "event", level: "warn" },
-        { emit: "event", level: "error" },
-      ],
-});
+const logDefinitions: Prisma.LogDefinition[] = env.isDevelopment
+  ? [
+      { emit: "event", level: "query" },
+      { emit: "event", level: "warn" },
+      { emit: "event", level: "error" },
+    ]
+  : [
+      { emit: "event", level: "warn" },
+      { emit: "event", level: "error" },
+    ];
+
+export const prisma = new PrismaClient({ log: logDefinitions });
 
 if (env.isDevelopment) {
   prisma.$on("query", (event) => {
@@ -21,8 +22,8 @@ if (env.isDevelopment) {
   });
 }
 
-prisma.$on("warn", (event) => logger.warn(event.message, "prisma"));
-prisma.$on("error", (event) => logger.error(event.message, "prisma"));
+prisma.$on("warn", (event) => logger.warn({ message: event.message }, "prisma"));
+prisma.$on("error", (event) => logger.error({ message: event.message }, "prisma"));
 
 export async function connectDatabase(): Promise<void> {
   await prisma.$connect();

@@ -51,7 +51,7 @@ function toPrevious(record: Growth | null): PreviousWeighIn | null {
   };
 }
 
-async function recomputeChain(
+export async function recomputeChain(
   tx: Prisma.TransactionClient,
   child: Children,
   fromDate: Date,

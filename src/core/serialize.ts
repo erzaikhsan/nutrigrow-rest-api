@@ -58,7 +58,7 @@ const WFA_LABEL: Record<WfaStatus, string> = {
   SEVERELY_UNDERWEIGHT: "Severely Underweight",
   UNDERWEIGHT: "Underweight",
   NORMAL: "Normal",
-  OVERWEIGHT_OBESE: "Overweight and Obese",
+  RISK_OVERWEIGHT: "Risk of Overweight",
   UNKNOWN: "Unknown",
 };
 
@@ -66,6 +66,7 @@ const HFA_LABEL: Record<HfaStatus, string> = {
   SEVERELY_STUNTED: "Severely Stunted",
   STUNTED: "Stunted",
   NORMAL: "Normal",
+  TALL: "Tall",
   UNKNOWN: "Unknown",
 };
 
@@ -73,7 +74,9 @@ const WFH_LABEL: Record<WfhStatus, string> = {
   SEVERELY_WASTING: "Severely Wasting",
   WASTING: "Wasting",
   NORMAL: "Normal",
-  OVERWEIGHT_OBESE: "Overweight and Obese",
+  POSSIBLE_RISK_OVERWEIGHT: "Possible Risk of Overweight",
+  OVERWEIGHT: "Overweight",
+  OBESE: "Obese",
   UNKNOWN: "Unknown",
 };
 

@@ -18,6 +18,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:reset": "prisma migrate reset",
     "db:seed": "tsx prisma/seed/index.ts",
+    "db:recompute": "tsx scripts/recompute-growth.ts",
     "db:studio": "prisma studio",
     "who:import-hcfa": "tsx scripts/import-who-hcfa.ts"
   },

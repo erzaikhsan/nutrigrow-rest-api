@@ -156,9 +156,9 @@ export function buildUpgkRows(context: UpgkContext): UpgkRow[] {
       (child) => growthOf(child)?.wfaStatus === "UNDERWEIGHT",
     ),
     countRow(
-      "Jumlah Balita Berat Badan Lebih (Overweight) Berdasarkan Indikator BB/U",
+      "Jumlah Balita Risiko Berat Badan Lebih Berdasarkan Indikator BB/U",
       context,
-      (child) => growthOf(child)?.wfaStatus === "OVERWEIGHT_OBESE",
+      (child) => growthOf(child)?.wfaStatus === "RISK_OVERWEIGHT",
     ),
     countRow(
       "Jumlah Balita Sangat Pendek (Severely Stunting) Berdasarkan Indikator TB/U",
@@ -181,9 +181,19 @@ export function buildUpgkRows(context: UpgkContext): UpgkRow[] {
       (child) => growthOf(child)?.wfhStatus === "WASTING",
     ),
     countRow(
-      "Jumlah Balita Gizi Lebih (Overweight and Obesse) Berdasarkan Indikator BB/TB",
+      "Jumlah Balita Berisiko Gizi Lebih Berdasarkan Indikator BB/TB",
       context,
-      (child) => growthOf(child)?.wfhStatus === "OVERWEIGHT_OBESE",
+      (child) => growthOf(child)?.wfhStatus === "POSSIBLE_RISK_OVERWEIGHT",
+    ),
+    countRow(
+      "Jumlah Balita Gizi Lebih (Overweight) Berdasarkan Indikator BB/TB",
+      context,
+      (child) => growthOf(child)?.wfhStatus === "OVERWEIGHT",
+    ),
+    countRow(
+      "Jumlah Balita Obesitas (Obese) Berdasarkan Indikator BB/TB",
+      context,
+      (child) => growthOf(child)?.wfhStatus === "OBESE",
     ),
   ];
 }
