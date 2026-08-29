@@ -152,19 +152,65 @@ dijalankan lewat pgbouncer dalam mode transaksi.
 
 ### 2. Layanan di Render
 
-Buat Blueprint baru dan arahkan ke repo ini. Render membaca `render.yaml`
-otomatis. Empat nilai bertanda `sync: false` diisi lewat dashboard:
+Ada dua jalan. **Blueprint menuntut metode pembayaran terpasang**, jadi kalau
+belum ada kartu, pakai jalan manual — hasilnya sama.
 
-| Kunci | Isi |
+#### Jalan manual (tanpa kartu)
+
+`New +` → `Web Service` → sambungkan repo ini. Isi:
+
+| Kolom | Nilai |
 |---|---|
-| `DATABASE_URL` | Connection string direct dari Neon |
-| `JWT_SECRET` | Buat baru: `openssl rand -base64 48`. Jangan pakai nilai yang sama dengan lokal |
-| `SMTP_USER` | Alamat Gmail pengirim OTP |
-| `SMTP_PASSWORD` | App password Google 16 karakter |
+| Name | `nutrigrow-api` |
+| Language | `Node` |
+| Branch | `dev` |
+| Region | `Singapore` |
+| Root Directory | dikosongkan |
+| Build Command | `yarn install --frozen-lockfile --production=false && yarn db:generate && yarn db:deploy && yarn build` |
+| Start Command | `yarn start` |
+| Instance Type | `Free` |
+| Health Check Path | `/health` (ada di bagian Advanced) |
+
+> **Service yang dibuat manual mengabaikan `render.yaml` sepenuhnya.** Berkas itu
+> hanya dibaca oleh Blueprint. Artinya seluruh environment variable di bawah ini
+> harus diketik sendiri — tidak ada yang terisi otomatis.
+
+#### Jalan Blueprint (butuh kartu)
+
+Buat Blueprint baru dan arahkan ke repo ini. Render membaca `render.yaml`
+otomatis, sehingga hanya empat nilai bertanda `sync: false` yang perlu diisi:
+`DATABASE_URL`, `JWT_SECRET`, `SMTP_USER`, dan `SMTP_PASSWORD`.
+
+### 2b. Environment variable
+
+Enam kunci pertama **wajib** — tanpa salah satunya proses tidak akan hidup,
+karena `src/config/env.ts` memvalidasi seluruhnya dengan zod lalu keluar dengan
+kode 1 bila ada yang kurang.
+
+| Kunci | Isi | Wajib |
+|---|---|---|
+| `DATABASE_URL` | Connection string direct dari Neon | ya |
+| `JWT_SECRET` | Buat baru: `openssl rand -base64 48`, minimal 32 karakter. Jangan pakai nilai yang sama dengan lokal | ya |
+| `SMTP_HOST` | `smtp.gmail.com` | ya |
+| `SMTP_USER` | Alamat Gmail pengirim OTP | ya |
+| `SMTP_PASSWORD` | App password Google 16 karakter | ya |
+| `NODE_ENV` | `production` | ya |
+| `API_PREFIX` | `api/v1` | bawaan sudah benar |
+| `SMTP_PORT` | `587` | bawaan sudah benar |
+| `SMTP_FROM_NAME` | `NutriGrow` | bawaan sudah benar |
+| `JWT_EXPIRES_IN` | `24h` | bawaan sudah benar |
+| `ACCOUNT_ACTIVE_YEARS` | `5` | bawaan sudah benar |
+| `CORS_ORIGINS` | dikosongkan | bawaan sudah benar |
+
+`NODE_ENV` terlihat punya bawaan, tetapi bawaannya `development` — kalau tidak
+diisi, server produksi berjalan dalam mode pengembangan.
 
 `PORT` **jangan diisi** — Render menyuntikkannya sendiri dan `src/config/env.ts`
 sudah membacanya. `CORS_ORIGINS` dibiarkan kosong: Retrofit adalah klien HTTP
 native, tidak mengirim header `Origin`, jadi CORS tidak berlaku baginya.
+
+`.node-version` tetap dibaca Render pada service manual maupun Blueprint, jadi
+versi Node tetap terkunci di 24 tanpa perlu diatur di dashboard.
 
 Build command menjalankan `yarn db:deploy` (`prisma migrate deploy`). Perintah
 itu idempoten — hanya menerapkan migrasi yang belum pernah jalan — jadi aman

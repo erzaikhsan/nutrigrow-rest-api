@@ -358,3 +358,22 @@ Neon yang baru — urutannya benar dan tidak memerlukan langkah tambahan.
 
 `db:recompute` tidak perlu dijalankan pada database yang baru disemai, karena
 `db:seed` sudah menghitung status memakai ambang yang berlaku sekarang.
+
+### 4. Blueprint diganti pembuatan service manual
+
+Blueprint menuntut metode pembayaran terpasang di workspace, dan itu tidak
+tersedia. Jalur yang dipakai: `New +` → `Web Service` lewat dashboard, paket
+free, tanpa kartu.
+
+Konsekuensi yang perlu diingat: **service yang dibuat manual tidak membaca
+`render.yaml` sama sekali.** Berkas itu hanya dipakai Blueprint. Build command,
+start command, health check path, dan **seluruh** environment variable harus
+diisi lewat dashboard. Yang paling mudah terlewat adalah `SMTP_HOST`,
+`SMTP_USER`, dan `SMTP_PASSWORD` — ketiganya tidak punya nilai bawaan di
+`env.ts`, sehingga proses langsung keluar dengan kode 1 saat boot.
+
+`render.yaml` tetap disimpan di repo: ia menjadi rujukan nilai yang harus
+diketik, dan langsung terpakai bila kelak workspace-nya sudah punya kartu.
+
+`.node-version` tetap berlaku pada service manual, karena Render membacanya dari
+repo, bukan dari blueprint.
