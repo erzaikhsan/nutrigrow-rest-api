@@ -1,4 +1,5 @@
 import express from "express";
+import type { RequestHandler } from "express";
 import cors from "cors";
 import * as helmetModule from "helmet";
 import { pinoHttp } from "pino-http";
@@ -7,7 +8,13 @@ import { logger } from "./core/logger.js";
 import { errorHandler, notFoundHandler } from "./middlewares/error.middleware.js";
 import { apiRouter } from "./modules/index.js";
 
-const helmet = helmetModule.default;
+type HelmetFactory = (options?: Record<string, unknown>) => RequestHandler;
+
+const helmetImport = helmetModule as unknown as HelmetFactory & {
+  default?: HelmetFactory;
+};
+
+const helmet: HelmetFactory = helmetImport.default ?? helmetImport;
 
 export function createApp() {
   const app = express();

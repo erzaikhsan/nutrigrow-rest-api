@@ -184,6 +184,183 @@ Versi Node tidak perlu diatur: `engines.node` di `package.json` bernilai
 
 ```ts
 import * as helmetModule from "helmet";
+
+type HelmetFactory = (options?: Record<string, unknown>) => RequestHandler;
+
+const helmetImport = helmetModule as unknown as HelmetFactory & {
+  default?: HelmetFactory;
+};
+
+const helmet: HelmetFactory = helmetImport.default ?? helmetImport;
+```
+
+Penyebabnya: build di Vercel gagal dengan galat berikut, sedangkan
+`yarn typecheck` di laptop lolos pada kode yang sama persis.
+
+```
+src/app.ts(18,11): error TS2349: This expression is not callable.
+  Type 'typeof import(".../node_modules/helmet/index")' has no call signatures.
+```
+
+Galat itu tidak berhasil direproduksi di laptop. helmet 8.3.0 diuji dengan
+`module` CommonJS maupun NodeNext, `esModuleInterop` hidup maupun mati, berkas
+sumber berformat ESM maupun CJS, TypeScript 4.9 sampai 5.9, versi helmet 6
+sampai 8, bahkan dengan kedua berkas deklarasinya sengaja dihapus — semuanya
+lolos. Kedua berkas tipe helmet (`index.d.cts` dan `index.d.mts`) juga ternyata
+identik, jadi perbedaan CommonJS versus ESM bukan penyebabnya. Dugaan yang
+tersisa adalah isi `node_modules` di Vercel yang berbeda dari yang dikunci
+`yarn.lock`.
+
+Karena itu bentuk impor di atas dibuat tidak bergantung pada bentuk tipe mana
+pun: `default` diambil bila ada, kalau tidak ada modulnya sendiri yang dipakai.
+Keduanya benar saat berjalan — `index.cjs` menutup berkasnya dengan
+`module.exports = exports.default` lalu `module.exports.default = module.exports`,
+sehingga modul dan `default`-nya menunjuk fungsi yang sama; pada `index.mjs`
+helmet adalah default export sungguhan.
+
+**Jangan kembalikan ke `import helmet from "helmet"`.** Perubahan itu akan lolos
+di laptop dan baru gagal di Vercel.
+
+Paket lain aman: `express`, `cors`, dan `pino` memakai `export =` yang berlaku di
+kedua mode, sedangkan `bcryptjs`, `jsonwebtoken`, dan `nodemailer` hanya diakses
+propertinya, tidak pernah dipanggil sebagai fungsi. Kalau kelak muncul galat
+serupa untuk `pdfkit-table` — satu-satunya sisa yang di-`new` — remedinya persis
+sama.
+
+### 3. Konfigurasi
+
+```bash
+cp .env.example .env
+```
+
+Buka `.env` dan sesuaikan:
+
+| Variabel | Keterangan |
+|---|---|
+| `DATABASE_URL` | `postgresql://nutrigrow:nutrigrow@localhost:5432/nutrigrow?schema=public` |
+| `DIRECT_URL` | Untuk Postgres lokal, **isi sama persis dengan `DATABASE_URL`**. Dipakai `prisma migrate`; tanpa ini `yarn db:migrate` berhenti dengan "Environment variable not found: DIRECT_URL" |
+| `JWT_SECRET` | Wajib minimal 32 karakter. Buat dengan `openssl rand -base64 48` |
+| `SMTP_USER` | **Harus berbentuk alamat surel yang sah** — divalidasi `z.string().email()`. Untuk uji lokal, alamat apa pun yang berformat benar sudah cukup |
+| `SMTP_HOST`, `SMTP_PASSWORD` | Wajib terisi, tidak punya nilai bawaan. Untuk uji lokal boleh diisi apa saja |
+| `ACCOUNT_ACTIVE_YEARS` | Masa aktif akun sejak pendaftaran |
+
+Server menolak jalan bila ada variabel yang tidak valid, lengkap dengan
+keterangan variabel mana yang bermasalah. Pengiriman surel baru benar-benar
+dipanggil saat pendaftaran dan lupa kata sandi, jadi nilai SMTP palsu tidak
+mengganggu pemakaian lain.
+
+> **App Password Gmail.** Kredensial SMTP kini hanya berada di `.env`, yang
+> tidak ikut ter-commit. Versi lama menuliskannya langsung di dalam kode
+> sumber, sehingga nilainya masih terekam pada riwayat git di branch `main`
+> (commit `87fd2b5`). Kalau sewaktu-waktu repo dibuka ke publik atau app
+> password itu dicurigai bocor, cabut dan ganti lewat Google Account →
+> Security → App passwords, lalu perbarui `.env` — riwayat git tidak perlu
+> ikut dibersihkan asalkan kredensial lamanya sudah tidak berlaku.
+
+### 4. Pasang, migrasi, semai
+
+```bash
+yarn install
+yarn db:generate        # tipe Prisma Client — wajib sebelum typecheck
+yarn db:deploy          # menerapkan prisma/migrations/0_init
+npx prisma db seed      # mengisi data penelitian Desa Jipang
+```
+
+> **Jangan memakai `yarn db:seed` di sini.** Skrip itu menjalankan `tsx`
+> langsung, dan **Prisma Client tidak membaca `.env`** — hanya Prisma CLI yang
+> membacanya. Akibatnya `yarn db:seed` berhenti dengan "Environment variable
+> not found: DATABASE_URL" meski `.env` sudah benar. `npx prisma db seed`
+> memuat `.env` lebih dulu lalu memanggil skrip yang sama. Alternatifnya:
+> `DATABASE_URL="..." yarn db:seed`.
+
+> Penyemaian memanggil `clearDatabase()` yang mengosongkan seluruh tabel lebih
+> dulu. Aman di basis data lokal, **tidak pernah** di produksi tanpa disengaja.
+
+### 5. Jalankan
+
+```bash
+yarn dev
+```
+
+Server siap di `http://localhost:3000/api/v1`. Cek cepat:
+
+```bash
+curl http://localhost:3000/health
+```
+
+### 6. Menghubungkan aplikasi Android
+
+Cari alamat IP laptop di jaringan lokal:
+
+```bash
+ip -4 addr show | grep inet
+```
+
+Lalu ubah `baseUrl` di `nutrigrow-app/app/src/main/java/com/project/labs/nutrigrow/data/remote/retrofit/ApiConfig.kt`
+menjadi `http://<IP-laptop>:3000/api/v1/`. Ponsel dan laptop harus berada di
+jaringan WiFi yang sama.
+
+Bila firewall aktif, izinkan portnya:
+
+```bash
+sudo firewall-cmd --add-port=3000/tcp   # tanpa --permanent, hanya sesi ini
+```
+
+---
+
+## Deploy ke Vercel + Neon
+
+Aplikasi berjalan sebagai satu Vercel Function di paket Hobby, dengan PostgreSQL
+terkelola di Neon. Keduanya gratis dan tidak menuntut kartu kredit.
+
+Render sempat disiapkan lebih dulu — `render.yaml` masih ada di akar repo — tetapi
+ditinggalkan karena Render mensyaratkan metode pembayaran terpasang, baik lewat
+Blueprint maupun service manual. Berkas itu dibiarkan sebagai rujukan bila kelak
+akunnya sudah punya kartu.
+
+Yang wajib ikut ter-commit sebelum deploy pertama: **`yarn.lock`**,
+**`prisma/migrations/`**, dan **`server.ts`**. Tanpa `prisma/migrations/`,
+database produksi lahir tanpa tabel sama sekali.
+
+### 1. Database di Neon
+
+Buat project baru, region Singapore. Neon memberi **dua** connection string, dan
+keduanya dipakai untuk hal yang berbeda:
+
+| Kunci | Connection string | Dipakai untuk |
+|---|---|---|
+| `DATABASE_URL` | yang hostname-nya memuat `-pooler` | seluruh kueri aplikasi saat berjalan |
+| `DIRECT_URL` | yang hostname-nya **tanpa** `-pooler` | hanya `prisma migrate` dan `prisma db push` |
+
+Keduanya diakhiri `?sslmode=require`.
+
+Pemisahan ini wajib di lingkungan serverless. Setiap permintaan bisa membangunkan
+instans baru, dan tanpa pooler koneksi database akan habis. Sebaliknya
+`prisma migrate` tidak bisa berjalan lewat pgbouncer dalam mode transaksi, jadi ia
+memakai jalur langsung. `prisma/schema.prisma` sudah menyatakan keduanya lewat
+`url` dan `directUrl`.
+
+### 2. Project di Vercel
+
+Import repo ini dari dashboard Vercel. **Tidak perlu `vercel.json`.** Vercel
+mendeteksi `server.ts` di akar repo, melihat `app.listen()` di dalamnya, lalu
+mengubah seluruh aplikasi Express menjadi satu Function yang menangani semua rute
+sendiri.
+
+`server.ts` sengaja dipisahkan dari `src/index.ts`. Keduanya memakai `createApp()`
+yang sama, tetapi `src/index.ts` juga memanggil `connectDatabase()` dan memasang
+penangan `SIGTERM` — dua hal yang hanya berguna untuk proses berumur panjang, dan
+hanya memperlambat cold start bila ikut dijalankan di serverless.
+
+Versi Node tidak perlu diatur: `engines.node` di `package.json` bernilai
+`>=20.11`, yang dipetakan Vercel ke Node 24 terbaru.
+
+### 2b. Kenapa helmet diimpor dengan cara yang tidak biasa
+
+`src/app.ts` mengimpor helmet begini, bukan sebagai impor default biasa:
+
+```ts
+import * as helmetModule from "helmet";
 const helmet = helmetModule.default;
 ```
 
