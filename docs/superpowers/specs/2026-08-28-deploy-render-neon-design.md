@@ -453,3 +453,42 @@ sebagai pertahanan sungguhan.
 Unduh satu laporan PDF lewat URL produksi. Itu satu-satunya jalur yang
 berpeluang menyentuh batas waktu Function. Paket Hobby memberi 300 detik, jauh
 di atas kebutuhan, tetapi tetap perlu dibuktikan sekali.
+
+---
+
+## Adendum 4 — 29 Agustus 2026: entrypoint ditunjuk eksplisit, `server.ts` dihapus
+
+Keputusan di Adendum 3 — "tidak perlu `vercel.json`, Vercel akan mendeteksi
+`server.ts`" — **terbukti salah dan dibatalkan.**
+
+### Yang terjadi
+
+Deploy berhasil, tetapi setiap permintaan ke `/health` menjawab
+`500 FUNCTION_INVOCATION_FAILED`. Runtime Logs menunjukkan sebabnya:
+
+```
+Invalid export found in module "/var/task/src/app.js".
+The default export must be a function or server.
+```
+
+Vercel memilih `src/app.ts` sebagai entrypoint fungsi, bukan `server.ts` di akar
+repo. `src/app.ts` sengaja hanya mengekspor `createApp` supaya bisa dipakai
+bersama oleh server lokal dan test, jadi ia memang tidak punya default export.
+Deteksi otomatis itu tidak bisa diarahkan dari dalam kode.
+
+### Bentuk yang dipakai sekarang
+
+| Berkas | Isi |
+|---|---|
+| `api/index.ts` | **Baru.** `export default createApp()` — satu fungsi untuk seluruh rute |
+| `vercel.json` | **Baru.** `rewrites` dari `/(.*)` ke `/api`; tanpa ini hanya `/api` yang terlayani |
+| `server.ts` | **Dihapus.** Menyisakannya berarti ada dua kandidat entrypoint yang bersaing |
+
+`src/index.ts` tidak berubah dan tetap menjadi entrypoint untuk pengembangan
+lokal, lengkap dengan `connectDatabase()` dan penangan `SIGTERM`.
+
+### Pelajaran
+
+Deteksi otomatis platform gagal secara diam-diam pada tahap build dan baru
+terlihat saat runtime. Untuk repo dengan lebih dari satu berkas yang tampak
+seperti entrypoint, entrypoint harus ditunjuk eksplisit sejak awal.
