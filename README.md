@@ -178,6 +178,43 @@ hanya memperlambat cold start bila ikut dijalankan di serverless.
 Versi Node tidak perlu diatur: `engines.node` di `package.json` bernilai
 `>=20.11`, yang dipetakan Vercel ke Node 24 terbaru.
 
+### 2b. Kenapa helmet diimpor dengan cara yang tidak biasa
+
+`src/app.ts` mengimpor helmet begini, bukan sebagai impor default biasa:
+
+```ts
+import * as helmetModule from "helmet";
+const helmet = helmetModule.default;
+```
+
+Ini bukan gaya, melainkan syarat agar kode lolos di dua tempat sekaligus.
+
+helmet 8 mengirim dua berkas tipe. Yang ESM, `index.d.mts`, menyatakan `default`
+sebagai default export sungguhan sehingga `helmet()` bisa dipanggil. Yang CJS,
+`index.d.cts`, memakai `export { helmet as default }` **tanpa** `export =`;
+di konteks CommonJS, impor default menghasilkan objek namespace, dan namespace
+tidak bisa dipanggil.
+
+`yarn typecheck` di laptop memakai jalur ESM sehingga lolos, sedangkan Vercel
+mengompilasi `src/app.ts` dalam konteks CommonJS dan berhenti dengan:
+
+```
+src/app.ts(16,11): error TS2349: This expression is not callable.
+  Type 'typeof import(".../node_modules/helmet/index")' has no call signatures.
+```
+
+Bentuk namespace di atas benar pada kedua jalur, karena `default` tersedia
+sebagai properti di keduanya. Perilaku saat berjalan tidak berubah sama sekali.
+
+**Jangan kembalikan ke `import helmet from "helmet"`.** Perubahan itu akan lolos
+di laptop dan baru gagal di Vercel.
+
+Paket lain aman: `express`, `cors`, dan `pino` memakai `export =` yang berlaku di
+kedua mode, sedangkan `bcryptjs`, `jsonwebtoken`, dan `nodemailer` hanya diakses
+propertinya, tidak pernah dipanggil sebagai fungsi. Kalau kelak muncul galat
+serupa untuk `pdfkit-table` — satu-satunya sisa yang di-`new` — remedinya persis
+sama.
+
 ### 3. Environment variable
 
 Diisi lewat **Settings → Environment Variables**, untuk environment Production.

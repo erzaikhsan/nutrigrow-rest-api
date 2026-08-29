@@ -1,11 +1,13 @@
 import express from "express";
 import cors from "cors";
-import helmet from "helmet";
+import * as helmetModule from "helmet";
 import { pinoHttp } from "pino-http";
 import { env } from "./config/env.js";
 import { logger } from "./core/logger.js";
 import { errorHandler, notFoundHandler } from "./middlewares/error.middleware.js";
 import { apiRouter } from "./modules/index.js";
+
+const helmet = helmetModule.default;
 
 export function createApp() {
   const app = express();
