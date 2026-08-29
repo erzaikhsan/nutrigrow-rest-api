@@ -377,3 +377,79 @@ diketik, dan langsung terpakai bila kelak workspace-nya sudah punya kartu.
 
 `.node-version` tetap berlaku pada service manual, karena Render membacanya dari
 repo, bukan dari blueprint.
+
+---
+
+## Adendum 2026-08-29 (2) — pindah dari Render ke Vercel
+
+Render dibatalkan sepenuhnya: metode pembayaran tetap diminta, baik lewat
+Blueprint maupun pembuatan web service manual. Koyeb juga gugur — sejak
+diakuisisi Mistral pada Februari 2026, pendaftar baru langsung masuk paket Pro
+$29/bulan tanpa tier gratis.
+
+Platform baru: **Vercel Hobby + Neon**. Hobby gratis tanpa kartu; kartu hanya
+diminta saat menaikkan ke Pro.
+
+### Yang membuat pemindahan ini murah
+
+Spec asli menolak Vercel karena "menuntut `src/index.ts` dipecah jadi handler".
+Keberatan itu ternyata jauh lebih ringan dari perkiraan, karena dua hal:
+
+1. `src/app.ts` sudah memisahkan `createApp()` dari `listen()` sejak awal.
+2. Vercel kini mendeteksi server Node tanpa konfigurasi: bila ada `server.ts` di
+   akar repo yang memanggil `app.listen()` saat modul dimuat, seluruh aplikasi
+   Express menjadi satu Function yang merutekan sendiri. Tidak perlu
+   `vercel.json`, tidak perlu aturan rewrite.
+
+Jadi seluruh adaptasinya adalah satu berkas baru berisi enam baris.
+
+### Berkas yang berubah
+
+| Berkas | Perubahan |
+|---|---|
+| `server.ts` | **Baru.** Entrypoint Vercel: `createApp()` lalu `listen()`. Sengaja terpisah dari `src/index.ts`, yang masih memanggil `connectDatabase()` dan memasang penangan `SIGTERM` — keduanya hanya berguna untuk proses berumur panjang |
+| `prisma/schema.prisma` | `directUrl` ditambahkan; `binaryTargets` diberi `rhel-openssl-3.0.x` |
+| `package.json` | `postinstall: prisma generate` |
+| `.env.example` | `DIRECT_URL` ditambahkan |
+| `README.md` | Bagian deploy ditulis ulang untuk Vercel |
+
+### Keputusan pooler dibalik
+
+Spec asli memilih connection string direct dan menolak `directUrl`, dengan alasan
+satu instans berumur panjang tidak membutuhkan pooler. Alasan itu **tidak lagi
+berlaku di serverless**: setiap permintaan dapat membangunkan instans baru, dan
+tanpa pooler koneksi Neon akan habis.
+
+Karena itu sekarang dipakai keduanya: `DATABASE_URL` menunjuk endpoint berpooler
+untuk kueri aplikasi, `DIRECT_URL` menunjuk endpoint langsung untuk
+`prisma migrate` — yang memang tidak bisa berjalan lewat pgbouncer mode transaksi.
+
+Konsekuensi untuk pengembangan lokal: `.env` sekarang wajib memuat `DIRECT_URL`
+juga. Untuk Postgres lokal isinya sama persis dengan `DATABASE_URL`.
+
+### Migrasi tidak lagi di build
+
+Di Render, `prisma migrate deploy` diletakkan pada build command. Di Vercel
+migrasi dijalankan manual dari laptop, karena build Vercel tidak dimaksudkan
+untuk menyentuh database dan migrasi yang gagal di tengah build akan
+meninggalkan database setengah jadi.
+
+### Yang hilang, dan itu bagus
+
+Tahap 6 spec asli — keep-alive lewat cron-job.org — **tidak diperlukan lagi**.
+Tidak ada instans yang tidur 15 menit dan tidak ada kuota 750 jam yang perlu
+dijaga. Risiko "permintaan pertama saat sidang menunggu 50 detik" hilang
+sepenuhnya.
+
+### Yang menjadi lebih lemah
+
+`express-rate-limit` menyimpan hitungan di memori, dan tiap instans serverless
+punya memorinya sendiri. Batas laju kini berlaku per instans, bukan global.
+Untuk beban Posyandu ini tidak menjadi masalah, tetapi tidak boleh diandalkan
+sebagai pertahanan sungguhan.
+
+### Verifikasi yang bertambah
+
+Unduh satu laporan PDF lewat URL produksi. Itu satu-satunya jalur yang
+berpeluang menyentuh batas waktu Function. Paket Hobby memberi 300 detik, jauh
+di atas kebutuhan, tetapi tetap perlu dibuktikan sekali.

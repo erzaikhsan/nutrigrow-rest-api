@@ -61,6 +61,7 @@ Buka `.env` dan sesuaikan:
 | Variabel | Keterangan |
 |---|---|
 | `DATABASE_URL` | `postgresql://nutrigrow:nutrigrow@localhost:5432/nutrigrow?schema=public` |
+| `DIRECT_URL` | Untuk Postgres lokal, **isi sama persis dengan `DATABASE_URL`**. Dipakai `prisma migrate`; tanpa ini `yarn db:migrate` berhenti dengan "Environment variable not found: DIRECT_URL" |
 | `JWT_SECRET` | Wajib minimal 32 karakter. Buat dengan `openssl rand -base64 48` |
 | `SMTP_USER` | **Harus berbentuk alamat surel yang sah** — divalidasi `z.string().email()`. Untuk uji lokal, alamat apa pun yang berformat benar sudah cukup |
 | `SMTP_HOST`, `SMTP_PASSWORD` | Wajib terisi, tidak punya nilai bawaan. Untuk uji lokal boleh diisi apa saja |
@@ -130,70 +131,65 @@ sudo firewall-cmd --add-port=3000/tcp   # tanpa --permanent, hanya sesi ini
 
 ---
 
-## Deploy ke Render + Neon
+## Deploy ke Vercel + Neon
 
-Aplikasi dijalankan sebagai proses Node biasa di Render (paket free), dengan
-PostgreSQL terkelola di Neon. Berkas `render.yaml` di akar repo sudah memuat
-seluruh konfigurasinya.
+Aplikasi berjalan sebagai satu Vercel Function di paket Hobby, dengan PostgreSQL
+terkelola di Neon. Keduanya gratis dan tidak menuntut kartu kredit.
+
+Render sempat disiapkan lebih dulu — `render.yaml` masih ada di akar repo — tetapi
+ditinggalkan karena Render mensyaratkan metode pembayaran terpasang, baik lewat
+Blueprint maupun service manual. Berkas itu dibiarkan sebagai rujukan bila kelak
+akunnya sudah punya kartu.
 
 Yang wajib ikut ter-commit sebelum deploy pertama: **`yarn.lock`**,
-**`prisma/migrations/`**, `render.yaml`, dan `.node-version`. Tanpa
-`prisma/migrations/`, build akan sukses tetapi database produksi lahir tanpa
-tabel sama sekali.
+**`prisma/migrations/`**, dan **`server.ts`**. Tanpa `prisma/migrations/`,
+database produksi lahir tanpa tabel sama sekali.
 
 ### 1. Database di Neon
 
-Buat project baru, region Singapore. Salin connection string **direct
-(unpooled)** — bukan yang pooled.
+Buat project baru, region Singapore. Neon memberi **dua** connection string, dan
+keduanya dipakai untuk hal yang berbeda:
 
-Pooler diperlukan hanya bila ada banyak proses; satu instans server berumur
-panjang tidak membutuhkannya, dan `prisma migrate deploy` justru gagal bila
-dijalankan lewat pgbouncer dalam mode transaksi.
+| Kunci | Connection string | Dipakai untuk |
+|---|---|---|
+| `DATABASE_URL` | yang hostname-nya memuat `-pooler` | seluruh kueri aplikasi saat berjalan |
+| `DIRECT_URL` | yang hostname-nya **tanpa** `-pooler` | hanya `prisma migrate` dan `prisma db push` |
 
-### 2. Layanan di Render
+Keduanya diakhiri `?sslmode=require`.
 
-Ada dua jalan. **Blueprint menuntut metode pembayaran terpasang**, jadi kalau
-belum ada kartu, pakai jalan manual — hasilnya sama.
+Pemisahan ini wajib di lingkungan serverless. Setiap permintaan bisa membangunkan
+instans baru, dan tanpa pooler koneksi database akan habis. Sebaliknya
+`prisma migrate` tidak bisa berjalan lewat pgbouncer dalam mode transaksi, jadi ia
+memakai jalur langsung. `prisma/schema.prisma` sudah menyatakan keduanya lewat
+`url` dan `directUrl`.
 
-#### Jalan manual (tanpa kartu)
+### 2. Project di Vercel
 
-`New +` → `Web Service` → sambungkan repo ini. Isi:
+Import repo ini dari dashboard Vercel. **Tidak perlu `vercel.json`.** Vercel
+mendeteksi `server.ts` di akar repo, melihat `app.listen()` di dalamnya, lalu
+mengubah seluruh aplikasi Express menjadi satu Function yang menangani semua rute
+sendiri.
 
-| Kolom | Nilai |
-|---|---|
-| Name | `nutrigrow-api` |
-| Language | `Node` |
-| Branch | `dev` |
-| Region | `Singapore` |
-| Root Directory | dikosongkan |
-| Build Command | `yarn install --frozen-lockfile --production=false && yarn db:generate && yarn db:deploy && yarn build` |
-| Start Command | `yarn start` |
-| Instance Type | `Free` |
-| Health Check Path | `/health` (ada di bagian Advanced) |
+`server.ts` sengaja dipisahkan dari `src/index.ts`. Keduanya memakai `createApp()`
+yang sama, tetapi `src/index.ts` juga memanggil `connectDatabase()` dan memasang
+penangan `SIGTERM` — dua hal yang hanya berguna untuk proses berumur panjang, dan
+hanya memperlambat cold start bila ikut dijalankan di serverless.
 
-> **Service yang dibuat manual mengabaikan `render.yaml` sepenuhnya.** Berkas itu
-> hanya dibaca oleh Blueprint. Artinya seluruh environment variable di bawah ini
-> harus diketik sendiri — tidak ada yang terisi otomatis.
+Versi Node tidak perlu diatur: `engines.node` di `package.json` bernilai
+`>=20.11`, yang dipetakan Vercel ke Node 24 terbaru.
 
-#### Jalan Blueprint (butuh kartu)
+### 3. Environment variable
 
-Buat Blueprint baru dan arahkan ke repo ini. Render membaca `render.yaml`
-otomatis, sehingga hanya empat nilai bertanda `sync: false` yang perlu diisi:
-`DATABASE_URL`, `JWT_SECRET`, `SMTP_USER`, dan `SMTP_PASSWORD`.
-
-### 2b. Environment variable
-
-Enam kunci pertama **wajib** — tanpa salah satunya proses tidak akan hidup,
-karena `src/config/env.ts` memvalidasi seluruhnya dengan zod lalu keluar dengan
-kode 1 bila ada yang kurang.
+Diisi lewat **Settings → Environment Variables**, untuk environment Production.
 
 | Kunci | Isi | Wajib |
 |---|---|---|
-| `DATABASE_URL` | Connection string direct dari Neon | ya |
-| `JWT_SECRET` | Buat baru: `openssl rand -base64 48`, minimal 32 karakter. Jangan pakai nilai yang sama dengan lokal | ya |
+| `DATABASE_URL` | connection string Neon **berpooler** | ya |
+| `DIRECT_URL` | connection string Neon **tanpa** pooler | ya |
+| `JWT_SECRET` | `openssl rand -base64 48`, minimal 32 karakter. Jangan pakai nilai yang sama dengan lokal | ya |
 | `SMTP_HOST` | `smtp.gmail.com` | ya |
-| `SMTP_USER` | Alamat Gmail pengirim OTP | ya |
-| `SMTP_PASSWORD` | App password Google 16 karakter | ya |
+| `SMTP_USER` | alamat Gmail pengirim OTP | ya |
+| `SMTP_PASSWORD` | app password Google 16 karakter | ya |
 | `NODE_ENV` | `production` | ya |
 | `API_PREFIX` | `api/v1` | bawaan sudah benar |
 | `SMTP_PORT` | `587` | bawaan sudah benar |
@@ -202,54 +198,41 @@ kode 1 bila ada yang kurang.
 | `ACCOUNT_ACTIVE_YEARS` | `5` | bawaan sudah benar |
 | `CORS_ORIGINS` | dikosongkan | bawaan sudah benar |
 
-`NODE_ENV` terlihat punya bawaan, tetapi bawaannya `development` — kalau tidak
+Enam kunci pertama tidak punya nilai bawaan di `src/config/env.ts`. Kurang satu
+saja, zod menolak dan proses keluar dengan kode 1 — Function-nya mati, bukan
+berjalan setengah.
+
+`NODE_ENV` terlihat punya bawaan, tetapi bawaannya `development`; kalau tidak
 diisi, server produksi berjalan dalam mode pengembangan.
 
-`PORT` **jangan diisi** — Render menyuntikkannya sendiri dan `src/config/env.ts`
-sudah membacanya. `CORS_ORIGINS` dibiarkan kosong: Retrofit adalah klien HTTP
-native, tidak mengirim header `Origin`, jadi CORS tidak berlaku baginya.
+`PORT` **jangan diisi.** Vercel merutekan permintaan lewat port internal, dan
+angka yang diberikan ke `app.listen()` hanya dipakai saat dijalankan lokal.
 
-`.node-version` tetap dibaca Render pada service manual maupun Blueprint, jadi
-versi Node tetap terkunci di 24 tanpa perlu diatur di dashboard.
+`API_PREFIX` harus `api/v1` **tanpa** garis miring di depan. `src/app.ts`
+menyusunnya menjadi `` `/${env.API_PREFIX}` ``, jadi `/api/v1` menghasilkan rute
+`//api/v1` dan setiap permintaan aplikasi kena 404 — sementara `/health` tetap
+hijau sehingga deploy tampak berhasil.
 
-Build command menjalankan `yarn db:deploy` (`prisma migrate deploy`). Perintah
-itu idempoten — hanya menerapkan migrasi yang belum pernah jalan — jadi aman
-diulang setiap deploy.
+### 4. Migrasi dan penyemaian
 
-> **Jangan hapus `--production=false` dari build command.** Yarn 1 tidak memasang
-> `devDependencies` bila `NODE_ENV` bernilai `production`, dan `render.yaml`
-> memang menyetel `NODE_ENV=production`. Tanpa bendera itu, `prisma`,
-> `typescript`, dan `tsx` tidak ikut terpasang, lalu build berhenti pada
-> `yarn db:generate` dengan pesan "prisma: command not found".
-
-### 3. Semai data produksi
-
-Dijalankan **manual dari laptop**, sekali saja, setelah deploy pertama berhasil:
+Keduanya dijalankan **dari laptop**, bukan dari Vercel. Vercel tidak menjalankan
+`prisma migrate` saat build, dan itu disengaja: migrasi yang gagal di tengah build
+akan meninggalkan database dalam keadaan setengah jadi.
 
 ```bash
-DATABASE_URL="<connection-string-neon>" yarn db:seed
+DATABASE_URL="<url-pooler>" DIRECT_URL="<url-direct>" yarn db:deploy
+DATABASE_URL="<url-pooler>" DIRECT_URL="<url-direct>" yarn db:seed
 ```
 
 > `db:seed` memanggil `clearDatabase()` yang mengosongkan seluruh tabel lebih
 > dulu. Itu tepat untuk database yang baru lahir dan berbahaya setelahnya.
-> Inilah alasan penyemaian tidak pernah diletakkan di build command.
 
 `db:recompute` **tidak perlu dijalankan** pada database yang baru disemai:
-`db:seed` sudah menghitung status memakai ambang Permenkes yang berlaku
-sekarang. Perintah itu hanya untuk database yang sudah berisi data lama.
+`db:seed` sudah menghitung status memakai ambang Permenkes yang berlaku sekarang.
+Perintah itu hanya untuk database yang sudah berisi data lama.
 
-### 4. Menahan instans agar tidak tidur
-
-Instans free Render tidur setelah ~15 menit tanpa permintaan, dan permintaan
-berikutnya menunggu 30–60 detik sampai bangun.
-
-Daftarkan job di cron-job.org atau UptimeRobot: `GET https://<host>/health`
-setiap 10 menit. Endpoint itu sudah dikecualikan dari log akses, jadi ping tidak
-mengotori log.
-
-Ping 24/7 selama sebulan memakai sekitar 730 dari 750 jam kuota bulanan.
-Marginnya tipis dan kuota itu dibagi dengan layanan free lain di akun yang sama,
-jadi **nyalakan ping menjelang sidang dan matikan setelahnya.**
+Setiap kali ada migrasi baru, `yarn db:deploy` di atas diulang sebelum
+mendorong kode ke GitHub.
 
 ### 5. Verifikasi
 
@@ -267,15 +250,32 @@ Lalu, lewat URL produksi:
    format ini dengan pola ketat; bila berubah, tiga layar berhenti bekerja.
 3. Panggil satu endpoint daftar anak **tanpa** token dan pastikan ditolak 401.
    Database produksi memuat nama balita dan orang tua yang sebenarnya.
-4. Uji `registerOfficer` memakai token Admin.
+4. Unduh satu laporan PDF. Ini bagian terberat dan satu-satunya yang berpeluang
+   menyentuh batas waktu Function; paket Hobby memberi 300 detik, jauh di atas
+   kebutuhan, tetapi tetap perlu dibuktikan sekali.
+5. Uji `registerOfficer` memakai token Admin.
 
 ### 6. Menghubungkan aplikasi Android ke produksi
 
-Ubah `baseUrl` di `ApiConfig.kt` menjadi `https://<host>/api/v1/`. Karena
-HTTPS, aplikasi tidak memerlukan `usesCleartextTraffic` maupun network security
-config — berbeda dengan menunjuk ke IP laptop di WiFi lokal.
+Ubah `BASE_URL` di `data/remote/retrofit/ApiConfig.kt` menjadi
+`https://<host>/api/v1/`. Karena HTTPS, aplikasi tidak memerlukan
+`usesCleartextTraffic` maupun network security config.
 
----
+### Yang berbeda dari Render
+
+Dua hal yang tidak lagi berlaku, dan keduanya menguntungkan:
+
+- **Tidak ada instans yang tidur 15 menit.** Cold start serverless dihitung dalam
+  detik, bukan menit, jadi tidak perlu ping keep-alive ke `/health` maupun
+  memikirkan kuota 750 jam.
+- **Tidak ada build command yang perlu dijaga.** `prisma generate` dijalankan
+  lewat `postinstall`, sehingga tetap berjalan meskipun Vercel memakai cache
+  dependensi.
+
+Satu hal yang menjadi lebih lemah: `express-rate-limit` menyimpan hitungannya di
+memori, dan setiap instans serverless punya memorinya sendiri. Batas laju karena
+itu berlaku per instans, bukan global. Untuk beban Posyandu ini tidak menjadi
+masalah, tetapi jangan diandalkan sebagai pertahanan sungguhan.
 
 ## Akun hasil penyemaian
 
