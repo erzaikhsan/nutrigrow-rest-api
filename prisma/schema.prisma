@@ -1,0 +1,308 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  Parent
+  Officer
+  Admin
+
+  @@map("enum_users_role")
+}
+
+enum Region {
+  RW1
+  RW2
+  RW3
+  RW4
+  RW5
+  Village
+
+  @@map("enum_region")
+}
+
+enum Gender {
+  M
+  F
+
+  @@map("enum_gender")
+}
+
+enum WfaStatus {
+  SEVERELY_UNDERWEIGHT @map("Severely Underweight")
+  UNDERWEIGHT          @map("Underweight")
+  NORMAL               @map("Normal")
+  RISK_OVERWEIGHT      @map("Risk of Overweight")
+  UNKNOWN              @map("Unknown")
+
+  @@map("enum_wfa_status")
+}
+
+enum HfaStatus {
+  SEVERELY_STUNTED @map("Severely Stunted")
+  STUNTED          @map("Stunted")
+  NORMAL           @map("Normal")
+  TALL             @map("Tall")
+  UNKNOWN          @map("Unknown")
+
+  @@map("enum_hfa_status")
+}
+
+enum WfhStatus {
+  SEVERELY_WASTING         @map("Severely Wasting")
+  WASTING                  @map("Wasting")
+  NORMAL                   @map("Normal")
+  POSSIBLE_RISK_OVERWEIGHT @map("Possible Risk of Overweight")
+  OVERWEIGHT               @map("Overweight")
+  OBESE                    @map("Obese")
+  UNKNOWN                  @map("Unknown")
+
+  @@map("enum_wfh_status")
+}
+
+enum MuacStatus {
+  SEVERE_ACUTE   @map("Gizi Buruk Akut")
+  MODERATE_ACUTE @map("Gizi Kurang Akut")
+  NORMAL         @map("Normal")
+  NOT_APPLICABLE @map("Tidak Berlaku")
+
+  @@map("enum_muac_status")
+}
+
+enum HcaStatus {
+  MICROCEPHALY @map("Mikrosefali")
+  NORMAL       @map("Normal")
+  MACROCEPHALY @map("Makrosefali")
+  UNKNOWN      @map("Unknown")
+
+  @@map("enum_hca_status")
+}
+
+enum WeightGainStatus {
+  ADEQUATE      @map("N")
+  INADEQUATE    @map("T")
+  NOT_WEIGHED   @map("O")
+  FIRST_WEIGHIN @map("B")
+
+  @@map("enum_weight_gain_status")
+}
+
+enum ChildStatus {
+  ACTIVE
+  GRADUATED
+  MOVED_OUT
+  DECEASED
+
+  @@map("enum_child_status")
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique @db.VarChar(120)
+  password     String   @db.VarChar(255)
+  role         Role
+  isActive     Boolean  @default(true) @map("is_active")
+  fullName     String   @map("full_name") @db.VarChar(100)
+  gender       Gender
+  dateOfBirth  DateTime @map("date_of_birth") @db.Date
+  phoneNumber  String   @map("phone_number") @db.VarChar(20)
+  address      String?  @db.Text
+  region       Region
+  activePeriod DateTime @map("active_period") @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  children         Children[]
+  measuredGrowths  Growth[]        @relation("GrowthMeasuredBy")
+  passwordResets   PasswordReset[]
+  auditLogs        AuditLog[]
+
+  @@index([role, region])
+  @@index([role, fullName])
+  @@map("users")
+}
+
+model Children {
+  id           String      @id @default(uuid()) @map("children_id") @db.Uuid
+  parentId     String      @map("parents_id") @db.Uuid
+
+  nik          String?     @unique @db.VarChar(16)
+  fullName     String      @map("full_name") @db.VarChar(75)
+  gender       Gender
+  placeOfBirth String      @map("place_of_birth") @db.VarChar(100)
+  dateOfBirth  DateTime    @map("date_of_birth") @db.Date
+
+  father       String?     @db.VarChar(100)
+  mother       String?     @db.VarChar(100)
+  orderOfChild Int         @map("order_of_child") @db.SmallInt
+  region       Region
+  status       ChildStatus @default(ACTIVE)
+
+  birthWeight     Float @map("birth_weight")
+  birthHeight     Float @map("birth_height")
+  birthHeadCircum Float @map("birth_head_circum")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  parent   User      @relation(fields: [parentId], references: [id], onDelete: Restrict)
+  growths  Growth[]
+  vaccines Vaccine[]
+
+  @@unique([parentId, orderOfChild], map: "children_parent_order_unique")
+  @@index([parentId])
+  @@index([region, status])
+  @@index([region, fullName])
+  @@map("children")
+}
+
+model Growth {
+  id         String   @id @default(uuid()) @db.Uuid
+  childId    String   @map("children_id") @db.Uuid
+  date       DateTime @db.Date
+
+  period     String?  @db.Char(7)
+  ageInMonth Int      @map("age") @db.SmallInt
+
+  weight     Float
+  height     Float
+  headCircum Float @map("head_circum")
+  armCircum  Float @map("arm_circum")
+
+  wfaZScore        Float? @map("wfa_zscore")
+  hfaZScore        Float? @map("hfa_zscore")
+  wfhZScore        Float? @map("wfh_zscore")
+  headCircumZScore Float? @map("head_circum_zscore")
+
+  wfaStatus        WfaStatus  @map("wfa_status")
+  hfaStatus        HfaStatus  @map("hfa_status")
+  wfhStatus        WfhStatus  @map("wfh_status")
+  muacStatus       MuacStatus @map("muac_status")
+  headCircumStatus HcaStatus  @map("head_circum_status")
+
+  weightGain        Float?           @map("weight_gain")
+  gainStatus        WeightGainStatus @map("gain_status")
+  consecutiveNoGain Int              @default(0) @map("consecutive_no_gain") @db.SmallInt
+
+  isFlagged  Boolean @default(false) @map("is_flagged")
+  flagReason String? @map("flag_reason") @db.VarChar(255)
+
+  note String? @db.VarChar(255)
+
+  measuredById String? @map("measured_by") @db.Uuid
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  child      Children @relation(fields: [childId], references: [id], onDelete: Cascade)
+  measuredBy User?    @relation("GrowthMeasuredBy", fields: [measuredById], references: [id], onDelete: SetNull)
+
+  @@unique([childId, period], map: "growth_child_period_unique")
+
+  @@index([childId, date(sort: Desc)])
+
+  @@index([date])
+  @@index([period])
+  @@map("growth")
+}
+
+model Vaccine {
+  id          String   @id @default(uuid()) @db.Uuid
+  childId     String   @map("children_id") @db.Uuid
+  date        DateTime @db.Date
+  vaccineName String   @map("vaccine_name") @db.VarChar(100)
+  place       String   @db.VarChar(100)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  child Children @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@index([childId, date(sort: Desc)])
+  @@map("vaccines")
+}
+
+model Event {
+  id          String   @id @default(uuid()) @db.Uuid
+  title       String   @db.VarChar(150)
+  date        DateTime @db.Date
+  startTime   String   @map("start_time") @db.VarChar(5)
+  endTime     String   @map("end_time") @db.VarChar(5)
+  place       String   @db.VarChar(150)
+  description String   @db.Text
+  region      Region
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  @@index([region, date])
+  @@index([date])
+  @@map("events")
+}
+
+model OtpRequest {
+  id         String    @id @default(uuid()) @db.Uuid
+  email      String    @db.VarChar(120)
+  codeHash   String    @map("code_hash") @db.VarChar(255)
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(3)
+  attempts   Int       @default(0) @db.SmallInt
+  consumedAt DateTime? @map("consumed_at") @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([email, createdAt(sort: Desc)])
+  @@index([expiresAt])
+  @@map("otp_requests")
+}
+
+model PasswordReset {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @map("token_hash") @db.VarChar(255)
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(3)
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([expiresAt])
+  @@map("password_resets")
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  RESTORE
+
+  @@map("enum_audit_action")
+}
+
+model AuditLog {
+  id       String      @id @default(uuid()) @db.Uuid
+  actorId  String?     @map("actor_id") @db.Uuid
+  action   AuditAction
+  entity   String      @db.VarChar(40)
+  entityId String      @map("entity_id") @db.VarChar(64)
+  before   Json?
+  after    Json?
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entity, entityId, createdAt(sort: Desc)])
+  @@index([actorId, createdAt(sort: Desc)])
+  @@map("audit_logs")
+}

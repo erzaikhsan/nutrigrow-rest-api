@@ -1,6 +1,11 @@
-.env
 node_modules
-nutrigrow-project-firebase-adminsdk-jqw8z-42da181455.json
-package-lock.json
+dist
 logs
 coverage
+
+.env
+.env.*
+!.env.example
+
+*.log
+.DS_Store
